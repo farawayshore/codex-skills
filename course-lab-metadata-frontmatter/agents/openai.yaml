@@ -1,0 +1,4 @@
+interface:
+  display_name: "Course Lab Metadata Frontmatter"
+  short_description: "Resolve reusable author and front-matter metadata"
+  default_prompt: "Use $course-lab-metadata-frontmatter after discovery has confirmed the course context and the run now needs report language selection, reusable student or collaborator metadata handling, instructor or course-local front-matter answers, or direct title-block and early-front-matter edits in the canonical report."

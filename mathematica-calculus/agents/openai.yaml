@@ -1,0 +1,4 @@
+interface:
+  display_name: "Mathematica Calculus"
+  short_description: "Run calculus tasks through Mathematica first"
+  default_prompt: "Use $mathematica-calculus to solve this calculus problem with Mathematica and explain the result."

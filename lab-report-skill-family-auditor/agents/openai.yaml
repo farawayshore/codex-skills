@@ -1,0 +1,4 @@
+interface:
+  display_name: "Lab Report Skill Family Auditor"
+  short_description: "Audit the lab-report skill family against the newest plan"
+  default_prompt: "Use $lab-report-skill-family-auditor when the newest lab-report family summary or planning note may have drifted from the installed skills. Run the local preparation script first, inspect whole skill folders under /root/.codex/skills, keep missing skills separate from refinement needs, prefer minimum-change judgments, do not edit skills automatically, and write the audit report to AI_construction."

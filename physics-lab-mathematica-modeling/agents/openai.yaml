@@ -1,0 +1,4 @@
+interface:
+  display_name: "Physics Lab Mathematica Modeling"
+  short_description: "Run batch-first physics modeling with strict case acceptance"
+  default_prompt: "Use $physics-lab-mathematica-modeling when a lab needs local copied scripts, a batch-first run_config.json contract, discovery of required picture-result cases plus handout-only cases, strict batch acceptance, Mathematica-first execution with up to 3 Mathematica retries and 3 Python fallback retries, and failure when handout expectations or physics-informed sanity checks are violated."

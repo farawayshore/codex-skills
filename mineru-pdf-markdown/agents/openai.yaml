@@ -1,0 +1,4 @@
+interface:
+  display_name: "MinerU PDF to Markdown"
+  short_description: "Batch PDF to Markdown via MinerU"
+  default_prompt: "Use $mineru-pdf-markdown to convert PDFs in a directory into per-PDF MinerU markdown outputs with linked extracted assets."

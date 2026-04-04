@@ -1,0 +1,4 @@
+interface:
+  display_name: "Compress PNG"
+  short_description: "Shrink oversized PNG images safely"
+  default_prompt: "Use $compress-png to audit and shrink oversized PNG files in this folder."

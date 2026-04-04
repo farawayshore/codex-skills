@@ -1,0 +1,89 @@
+{
+  "run_id": "lx2-batch-autorun",
+  "experiment": {
+    "name": "standing waves circular plate",
+    "safe_name": "standing-waves-circular-plate"
+  },
+  "objective": "discover all required LX2 picture-result cases, merge a handout-only case, and export strict batch comparison artifacts",
+  "engine_policy": {
+    "preferred": "mathematica",
+    "allow_python_fallback": true
+  },
+  "inputs": {
+    "parameters": {
+      "radius_m": 0.12
+    },
+    "constants": {
+      "half_thickness_m": 0.0005,
+      "density_kg_m3": 8500.0,
+      "poisson": 0.324
+    },
+    "boundary_conditions": {},
+    "comparison_targets": []
+  },
+  "workflow": {
+    "mode": "patch-existing",
+    "source_wl": "/root/grassman_projects/AI_works/resources/experiment_data/standing waves/2-d_standing-waves_for_students_circular_/lx2_plate_simulation.wl",
+    "source_py": "/root/.codex/skills/physics-lab-mathematica-modeling/fixtures/lx2_circular_plate/lx2_plate_python_fallback.py",
+    "template_id": ""
+  },
+  "outputs": {
+    "root_dir": "/root/grassman_projects/AI_works/results/lx2_batch_modeling"
+  },
+  "artifacts_requested": [
+    "summary_json",
+    "summary_txt",
+    "plot_png",
+    "radial_png",
+    "table_csv",
+    "params_json"
+  ],
+  "discovery": {
+    "enabled": true,
+    "picture_results_dir": "/root/grassman_projects/AI_works/resources/experiment_pic_results/Introductory Physics Experiments for Undergraduates: discovery/mechanics",
+    "parser": "lx2_filename"
+  },
+  "handout_cases": [
+    {
+      "case_id": "handout-example-m5-n7-f10-197khz",
+      "parameters": {
+        "frequency_hz": 10197.0,
+        "m": 5,
+        "n": 7,
+        "radius_m": 0.12
+      },
+      "handout_expectations": {
+        "required": false,
+        "checks": [
+          {
+            "id": "radial-node-count",
+            "type": "equals",
+            "path": "summary.radial_node_count",
+            "expected": 7
+          }
+        ]
+      }
+    }
+  ],
+  "batch_policy": {
+    "strict_required_cases": true,
+    "include_picture_result_cases": true,
+    "include_handout_only_cases": true
+  },
+  "retry_policy": {
+    "mathematica_attempts": 3,
+    "python_attempts": 3
+  },
+  "sanity_checks": {
+    "enabled": true,
+    "geometry_bound_tolerance_ratio": 0.05,
+    "check_monotonic_radii": true,
+    "check_mode_topology": true,
+    "check_positive_derived_values": true,
+    "check_cross_case_consistency": true
+  },
+  "handout_expectations": {
+    "required": false,
+    "checks": []
+  }
+}

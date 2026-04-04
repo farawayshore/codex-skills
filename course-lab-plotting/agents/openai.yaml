@@ -1,0 +1,4 @@
+interface:
+  display_name: "Course Lab Plotting"
+  short_description: "Render standalone lab plots with honest annotations"
+  default_prompt: "Use $course-lab-plotting after the experiment and numeric artifacts are already known, rely on the local copied scripts and vendored matplotlib in this folder, generate permanent plot assets, keep unresolved plotting gaps visible, mark honest special points such as maxima or zero points when supported directly by the data, and use controlled color styling to improve clarity without drifting into decorative interpretation."

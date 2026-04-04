@@ -1,0 +1,4 @@
+interface:
+  display_name: "Course Lab Data Processing"
+  short_description: "Process validated lab data into direct and derived artifacts"
+  default_prompt: "Use $course-lab-data-processing after transferred lab data has already been user-validated, read the matching handout first to resolve notation before any calculation, preserve direct measured symbols exactly as the handout defines them, treat slash labels such as T/N as quantity-plus-unit rather than one merged symbol, do not simplify measured symbols such as 2r into r without an explicit derived step, compute direct summaries with the local copied scripts in this folder, compute indirect handout-requested quantities with propagation rules, default to k=2 unless the experiment explicitly requires another coverage factor, keep missing resolution information visible, and stop before interpretation, theory comparison, or discussion prose."

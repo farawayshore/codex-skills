@@ -1,0 +1,4 @@
+interface:
+  display_name: "MinerU PDF to JSON"
+  short_description: "Batch PDF to JSON via MinerU"
+  default_prompt: "Use $mineru-pdf-json to convert PDFs in a directory into per-PDF MinerU JSON outputs and caption-named images."

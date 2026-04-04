@@ -1,0 +1,160 @@
+{
+  "title": "Atomic Force Microscopy",
+  "section_order": [
+    "introduction",
+    "objectives",
+    "equipment",
+    "principle",
+    "steps",
+    "thinking_questions",
+    "references"
+  ],
+  "front_matter": {
+    "heading": "Front Matter",
+    "pages": [
+      1
+    ],
+    "text": "Atomic Force Microscopy",
+    "list_items": [],
+    "equations": [],
+    "tables": [],
+    "images": [],
+    "subheadings": []
+  },
+  "sections": {
+    "introduction": {
+      "heading": "Introduction",
+      "pages": [
+        1
+      ],
+      "text": "Atomic force microscopy is widely used to characterize surface morphology through cantilever deflection and nanoscale imaging.",
+      "list_items": [],
+      "equations": [],
+      "tables": [],
+      "images": [],
+      "subheadings": []
+    },
+    "objectives": {
+      "heading": "Objectives",
+      "pages": [
+        1
+      ],
+      "text": "",
+      "list_items": [
+        "Understand the working principle of atomic force microscopy.",
+        "Measure the surface morphology of the sample."
+      ],
+      "equations": [],
+      "tables": [],
+      "images": [],
+      "subheadings": []
+    },
+    "equipment": {
+      "heading": "Equipment",
+      "pages": [
+        2
+      ],
+      "text": "The setup includes an atomic force microscope and a computer workstation.",
+      "list_items": [],
+      "equations": [],
+      "tables": [
+        {
+          "caption": [
+            "Main equipment"
+          ],
+          "footnote": [],
+          "body": "AFM controller | microscope head",
+          "img_path": "",
+          "page": 2,
+          "context_subheading": null,
+          "section_heading": "Equipment"
+        }
+      ],
+      "images": [],
+      "subheadings": []
+    },
+    "principle": {
+      "heading": "Experiment Principle",
+      "pages": [
+        2,
+        3
+      ],
+      "text": "A cantilever deflects under tip-sample forces, and the deflection is converted into topography data.",
+      "list_items": [],
+      "equations": [
+        "F = -kx"
+      ],
+      "tables": [],
+      "images": [
+        {
+          "caption": [
+            "Force curve of AFM"
+          ],
+          "footnote": [],
+          "img_path": "afm-force-curve.png",
+          "page": 2,
+          "context_subheading": "4.1 Force curve schematic",
+          "section_heading": "Experiment Principle"
+        }
+      ],
+      "subheadings": [
+        {
+          "heading": "4.1 Force curve schematic",
+          "page": 2
+        }
+      ]
+    },
+    "steps": {
+      "heading": "Experimental Procedure",
+      "pages": [
+        3,
+        4
+      ],
+      "text": "1. Power on the AFM.\n2. Align the laser.\n3. Scan the sample.",
+      "list_items": [
+        "Power on the AFM and warm up the controller.",
+        "Align the laser spot and photodetector.",
+        "Scan the sample and save the topography image."
+      ],
+      "equations": [],
+      "tables": [],
+      "images": [],
+      "subheadings": []
+    },
+    "thinking_questions": {
+      "heading": "Thinking Questions",
+      "pages": [
+        4
+      ],
+      "text": "",
+      "list_items": [
+        "Why does the force curve change with tip-sample distance?"
+      ],
+      "equations": [],
+      "tables": [],
+      "images": [],
+      "subheadings": []
+    },
+    "references": {
+      "heading": "References",
+      "pages": [
+        4
+      ],
+      "text": "",
+      "list_items": [],
+      "equations": [],
+      "tables": [],
+      "images": [],
+      "subheadings": []
+    }
+  },
+  "appendix_candidates": {
+    "appendix_sections": [],
+    "image_captions": [
+      "Force curve of AFM"
+    ],
+    "table_captions": [
+      "Main equipment"
+    ]
+  }
+}

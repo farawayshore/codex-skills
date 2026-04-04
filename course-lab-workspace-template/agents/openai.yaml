@@ -1,0 +1,4 @@
+interface:
+  display_name: "Course Lab Workspace Template"
+  short_description: "Create or reuse the report workspace and canonical TeX"
+  default_prompt: "Use $course-lab-workspace-template after discovery has confirmed the experiment and template choice, read the saved experiment-specific discovery cache first, decide between new, modify, or rewrite mode, create or reuse the workspace under AI_works/results/<experiment-safe-name>/, keep canonical-.tex ambiguity visible, and ensure the local build script, procedures file, discovery-cache handoff, and \\NeedsInput placeholder macro contract are ready before metadata or drafting."

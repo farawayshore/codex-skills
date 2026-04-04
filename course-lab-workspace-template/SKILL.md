@@ -1,0 +1,115 @@
+---
+name: course-lab-workspace-template
+description: Use when a course lab-report run has already confirmed the experiment, template choice, and modify-or-rewrite decision and now needs to create or reuse the report workspace, select the canonical TeX file, and establish the baseline file contract before metadata or drafting begins.
+---
+
+# Course Lab Workspace Template
+
+## Overview
+
+Create or reuse the report workspace under `AI_works/results/<experiment-safe-name>/` and make the baseline report contract explicit before later skills touch metadata or body content.
+
+This skill owns canonical TeX selection, template copy or refresh, local `build.sh`, procedures-markdown creation, and `\NeedsInput{...}` placeholder macro readiness.
+
+It supports both standalone `.tex` templates and language-scoped template bundles whose root contains `main.tex` plus companion assets.
+
+## When to Use
+
+- `course-lab-discovery` already confirmed the experiment target and showed the template candidates.
+- The user has chosen `new`, `modify`, or `rewrite`.
+- Later skills need a stable workspace path and canonical TeX file before front matter, scaffold, or drafting work begins.
+- The current result folder may already contain `.tex` files and that state needs to stay visible.
+
+Do not use this skill to discover sources, decode PDFs, transfer data, interpret results, or draft report prose.
+
+## Output Contract
+
+- Use local `scripts/ensure_report_workspace.py` as the canonical workspace tool.
+- Read the chosen discovery cache first when one was saved by `course-lab-discovery`, for example `--discovery-json /tmp/course-lab-discovery-<experiment-safe-name>-<variant>.json`.
+- Accept either:
+  - a standalone template file such as `AI_works/resources/latex_templet/english/tau_templet copy.tex`, or
+  - a bundle directory such as `AI_works/resources/latex_templet/chinese/Rho_Class___Research_Article_Template_CN(...)/` that contains `main.tex`.
+- Create or reuse `AI_works/results/<experiment-safe-name>/`.
+- Produce or confirm the canonical report file.
+- Keep the standard subdirectories, local `build.sh`, and `<experiment-safe-name>_procedures.md` in place.
+- For single-file templates, copy the chosen `.tex` into the canonical report path.
+- For bundle templates, copy `main.tex` plus companion assets into the workspace while preserving bundle-relative paths.
+- Ensure the canonical TeX file can render `\NeedsInput{...}` placeholders by inserting the macro block when it is missing.
+- Treat `/tmp/course-lab-discovery-*.json` as cache input, not as the canonical workspace artifact.
+- Write `notes/workspace_manifest.json` and optionally a second manifest via `--output-json`.
+- Record `template_language`, `template_kind`, `template_root`, `template_entry`, and `copied_companion_assets` in the workspace manifest.
+- Surface ambiguity when multiple `.tex` files exist and no canonical file has been confirmed.
+
+## Primary Command
+
+```bash
+python3 /root/.codex/skills/course-lab-workspace-template/scripts/ensure_report_workspace.py \
+  --discovery-json /tmp/course-lab-discovery-interference-lab-en.json \
+  --mode new \
+  --template "/root/grassman_projects/AI_works/resources/latex_templet/english/tau_templet copy.tex" \
+  --output-json /tmp/course-lab-workspace.json
+```
+
+Bundle example:
+
+```bash
+python3 /root/.codex/skills/course-lab-workspace-template/scripts/ensure_report_workspace.py \
+  --experiment "晶体光学性质" \
+  --mode rewrite \
+  --template "/root/grassman_projects/AI_works/resources/latex_templet/chinese/Rho_Class___Research_Article_Template_CN(translated by SYSU 2024 physics department Guangwei Lang)" \
+  --output-json /tmp/course-lab-workspace-crystal-optics.json
+```
+
+Use `--canonical-tex existing.tex` when `modify` or `rewrite` must target a specific existing file. Explicit `--course`, `--experiment`, `--results-root`, and source-list flags still override values from the discovery cache when both are present.
+
+## Workflow
+
+1. Confirm discovery is done and identify the correct experiment-specific discovery cache, such as `/tmp/course-lab-discovery-<experiment-safe-name>-en.json` or `/tmp/course-lab-discovery-<experiment-safe-name>-zh.json`.
+2. Confirm the workspace mode:
+   - `new` for a fresh report from a chosen template,
+   - `modify` for editing an existing canonical `.tex`,
+   - `rewrite` for copying the template back onto the canonical file while keeping a timestamped backup.
+3. Identify whether the chosen template is a standalone `.tex` file or a bundle directory rooted at `main.tex`.
+4. Run `ensure_report_workspace.py` with `--discovery-json ...` first so course, experiment, results-root, and discovered source lists come from the same cache context unless you intentionally override them.
+5. Inspect the current result directory state. If multiple `.tex` files exist and none is clearly canonical, stop and carry that ambiguity back to the user with `--canonical-tex` as the follow-up.
+6. Review `canonical_tex`, `workspace`, `procedures_markdown`, `build_script`, `template_kind`, `template_language`, `template_root`, `template_entry`, `copied_companion_assets`, `discovery_cache_input`, and the `needs_input_*` manifest fields before handing off to `course-lab-metadata-frontmatter` or later drafting skills.
+
+## Quick Reference
+
+| Situation | Action |
+|---|---|
+| Discovery already saved an experiment-specific cache file | Pass `--discovery-json /tmp/course-lab-discovery-<experiment-safe-name>-<variant>.json` first |
+| Fresh report from an English single-file template | `--mode new --template /root/grassman_projects/AI_works/resources/latex_templet/english/...tex` |
+| Fresh or rewritten report from a Chinese bundle template | `--mode new` or `--mode rewrite --template /root/grassman_projects/AI_works/resources/latex_templet/chinese/<bundle-dir>` |
+| Existing canonical file should be edited in place | `--mode modify` |
+| Existing canonical file should be replaced from template | `--mode rewrite --template ...` |
+| One existing `.tex` file and no `main.tex` | `modify` can reuse it automatically |
+| Multiple `.tex` files and no confirmed canonical file | Stop and ask for `--canonical-tex` |
+| Template lacks `\NeedsInput` support | Let the script inject the placeholder macro block |
+
+## Boundary Rules
+
+- This skill starts after discovery, not before it.
+- This skill does not choose the experiment or template silently.
+- This skill does not decode handouts, normalize sections, or draft front matter.
+- This skill does not interpret data, write discussion prose, or run final QC.
+- `new` mode must not overwrite an existing canonical file.
+- `modify` mode must not invent a canonical file when none exists.
+
+## Common Mistakes
+
+- Running workspace setup before the template choice is confirmed.
+- Reusing one generic `/tmp/course-lab-discovery.json` name after discovery switched to experiment-specific filenames.
+- Treating the `/tmp` discovery file as a permanent workspace artifact instead of a cache input.
+- Treating a bundle directory like a single `.tex` file and missing its companion assets.
+- Treating a folder with several `.tex` files as if `main.tex` were obvious when it is not.
+- Using `rewrite` without noticing that it will replace the canonical file and create a backup.
+- Assuming the template already defines `\NeedsInput{...}`.
+- Letting workspace setup drift into metadata or body drafting.
+
+## Resources
+
+- `scripts/ensure_report_workspace.py`: local workspace initializer
+- `scripts/common.py`: local repo-root and path helpers
+- `assets/build.sh`: local build-script template copied into each workspace
+- `tests/test_ensure_report_workspace.py`: regression coverage for workspace creation and canonical-file reuse

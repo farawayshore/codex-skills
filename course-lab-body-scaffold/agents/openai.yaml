@@ -1,0 +1,4 @@
+interface:
+  display_name: "Course Lab Body Scaffold"
+  short_description: "Build a handout-driven report body scaffold"
+  default_prompt: "Use $course-lab-body-scaffold after normalized handout sections and the current template are already known, then build a standalone body scaffold with stable procedure IDs, `% procedure:Pxx` coverage, and explicit missing-section handling before data transfer or later interpretation work."

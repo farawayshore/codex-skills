@@ -1,0 +1,4 @@
+interface:
+  display_name: "Course Lab Experiment Principle"
+  short_description: "Write theory-facing report sections and insert handout figures"
+  default_prompt: "Use $course-lab-experiment-principle only after normalized handout sections, the canonical report file, and the body scaffold already exist. Prefer normalized Markdown first and use JSON only when Markdown is absent. In combined reports, run once per handout and target one explicit parent report part at a time. Stage handout-derived theory figures with the local copied scripts in this folder, write directly into Introduction, nearby Background, and Experiment Principle, insert matching handout-derived figures only inside those owned sections, do not mutate sibling report parts, emit an ownership manifest, keep unresolved gaps visible, and do not drift into results, discussion, late evidence placement, or final QC."

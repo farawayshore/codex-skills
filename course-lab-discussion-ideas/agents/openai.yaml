@@ -1,0 +1,4 @@
+interface:
+  display_name: "Course Lab Discussion Ideas"
+  short_description: "Build artifact-only discussion ideas from stable interpretation evidence"
+  default_prompt: "Use $course-lab-discussion-ideas only after stable interpretation artifacts and parent-passed reference report paths already exist, rely on the local copied scripts in this folder, read experiment-local permanent memory before deciding whether broad search is allowed, skip broad first-pass search when permanent memory exists, always run targeted candidate refinement once or twice for retained ideas, write synthesis judgment state such as pending_synthesis_judgment into the handoff artifacts instead of prompting for direct approval here, emit artifact-only JSON and Markdown handoffs, and do not mutate the report or write the final harmonized discussion."

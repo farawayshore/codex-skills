@@ -1,0 +1,4 @@
+interface:
+  display_name: "Course Lab Handout Normalization"
+  short_description: "Normalize a selected handout into section artifacts"
+  default_prompt: "Use $course-lab-handout-normalization after discovery has confirmed the experiment and source PDF, prefer PDF-to-Markdown first for readable inspection, escalate to PDF-to-JSON second only when structured section extraction is needed, save any produced JSON or Markdown with experiment-specific filenames, and avoid editing the report workspace or TeX."

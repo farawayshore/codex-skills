@@ -1,0 +1,4 @@
+interface:
+  display_name: "Course Lab Data Transfer"
+  short_description: "Transfer raw lab data with a proofread gate"
+  default_prompt: "Use $course-lab-data-transfer after the experiment and data sources are already known, keep PDF and image transfer vision-first, compare that reading against MinerU Markdown second and PDF-to-text third when needed, preserve handwritten Chinese notes with nearby English translations, and stop for user proofreading before uncertainty work or interpretation."
