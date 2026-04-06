@@ -46,11 +46,13 @@ class StageSignatoryPagesTests(unittest.TestCase):
             self.assertEqual(manifest["file_count"], 3)
             tex = output_tex.read_text(encoding="utf-8")
             self.assertIn(r"\begin{figure*}[p]", tex)
-            self.assertIn(r"\begin{subfigure}[t]{0.48\textwidth}", tex)
+            self.assertIn(r"\begin{subfigure}[t]{0.42\textwidth}", tex)
+            self.assertIn(r"\includegraphics[width=\linewidth,height=0.33\textheight,keepaspectratio]", tex)
             self.assertIn(r"\caption{Signatory pages}", tex)
-            self.assertIn(r"\caption*{Serial No.~1}", tex)
-            self.assertIn(r"\caption*{Serial No.~2}", tex)
-            self.assertIn(r"\caption*{Serial No.~3}", tex)
+            self.assertIn(r"\caption{Serial No.~1}", tex)
+            self.assertIn(r"\caption{Serial No.~2}", tex)
+            self.assertIn(r"\caption{Serial No.~3}", tex)
+            self.assertNotIn(r"\caption*{Serial No.~1}", tex)
             self.assertIn(r"\par\medskip", tex)
             self.assertNotIn("Auto-generated", tex)
             self.assertNotIn("\n\n\\begin{figure}", tex)
@@ -91,7 +93,8 @@ class StageSignatoryPagesTests(unittest.TestCase):
             self.assertEqual(tex.count(r"\begin{figure*}[p]"), 3)
             self.assertIn(r"\ContinuedFloat", tex)
             self.assertIn(r"\caption{Signatory pages (continued)}", tex)
-            self.assertEqual(tex.count(r"\caption*{Serial No.~"), 9)
+            self.assertEqual(tex.count(r"\caption{Serial No.~"), 9)
+            self.assertNotIn(r"\caption*{Serial No.~", tex)
 
 
 if __name__ == "__main__":

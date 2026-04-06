@@ -11,6 +11,8 @@ Turn matched experiment-image sources into staged figure artifacts and placement
 
 This skill owns experiment picture-result staging, signatory-page staging, and report-facing evidence planning. It is standalone with local copied tools, so it should not reach back into the old `course-lab-report` folder.
 
+When late-stage comparison artifacts exist, this skill should stage the paired simulation image assets and group them with the matching observed case evidence rather than planning only experiment-side photos.
+
 ## When to Use
 
 - The experiment is already confirmed.
@@ -26,11 +28,15 @@ Do not use this skill to choose the experiment, decode a new handout, transfer r
 - Use local `scripts/stage_picture_results.py` to copy experiment picture results into the report workspace and emit `picture_results_manifest.json`.
 - Use local `scripts/plan_picture_evidence.py` to convert the manifest into `picture_evidence_plan.json` and `picture_evidence_plan.md`.
 - Use local `scripts/stage_signatory_pages.py` to stage signed record sheets and emit both a manifest and a LaTeX snippet.
+- When `course-lab-final-staging` emitted normalized `comparison_cases`, pass that artifact into `stage_picture_results.py` so simulation images are staged into the report workspace and can be paired with same-case observed images.
+- Keep signatory-page layouts footer-safe: bound the staged page height so two-row appendix blocks stay inside the printable area, and use normal subfigure captions so `(a)`, `(b)`, `(c)` markers remain visible.
 - Treat handout-derived theory images for `Introduction`, nearby `Background`, and `Experiment Principle` as already owned by `course-lab-experiment-principle`.
 - Treat the staged draft from `course-lab-final-staging` as the main upstream report-writing input for figure placement decisions.
 - Support late picture placement into that staged draft by using the staged assets, manifests, and evidence plan to decide where local figure blocks belong.
 - Keep evidence planning focused on improving placement quality after final staging. It does not replace interpretation work or final QC.
 - Keep grouping uncertainty visible. If figure grouping is not secure, emit a visible `\NeedsInput{...}` placeholder instead of guessing.
+- Keep figure captions and nearby placement notes human-sounding. Do not use provenance or workflow wording such as `source archive`, `staged evidence set`, `source label`, `metadata`, or `evidence pool` in the report.
+- When the handout does not supply a formal caption, refer to a picture by its file name stem or a handout-grounded description instead of exposing internal staging language.
 - Use `15 MB` as a late-stage coordination target for image handling, and surface compression guidance early enough that `course-lab-finalize-qc` still owns the final compile-and-QC decision.
 - Use `$compress-png` when staged PNG assets threaten that coordination target, but keep the figure-evidence toolchain local to this folder.
 - Do not switch staged images to another format unless it is truly necessary. Prefer staying in the original format, especially PNG.
@@ -43,6 +49,7 @@ Stage experiment picture results:
 ```bash
 python3 /root/.codex/skills/course-lab-figure-evidence/scripts/stage_picture_results.py \
   --source-root "/path/to/AI_works/resources/experiment_pic_results/<matched-folder>" \
+  --comparison-cases-json "/path/to/results/<experiment>/final_staging_summary.json" \
   --output-dir "/path/to/results/<experiment>/picture-results" \
   --output-json "/path/to/results/<experiment>/picture_results_manifest.json"
 ```
@@ -72,13 +79,15 @@ python3 /root/.codex/skills/course-lab-figure-evidence/scripts/stage_signatory_p
 2. Confirm that discovery already identified the picture-result directory and any signatory-page directory.
 3. Assume `course-lab-experiment-principle` already handled handout-derived theory figures for the early theory-facing sections.
 4. Run `stage_picture_results.py` on the matched experiment picture-result directory.
-5. Convert `picture_results_manifest.json` into `picture_evidence_plan.json` and `picture_evidence_plan.md` with `plan_picture_evidence.py`.
-6. If signed record sheets exist, run `stage_signatory_pages.py` and keep the emitted LaTeX snippet separate from the scientific results figures.
-7. Use the staged draft as the placement surface and apply late picture placement near the already assembled figure-relevant content without rewriting non-figure prose.
-8. Review grouping warnings, unmapped evidence units, and representative-subset choices before finalizing late picture placement.
-9. If the staged raster-image pool looks heavy against the `15 MB` coordination target, invoke `$compress-png` before handing off to `course-lab-finalize-qc`.
-10. Keep compression in the same image format unless that still cannot get the asset pool under control.
-11. If cross-format conversion looks necessary after same-format compression attempts, ask the user for confirmation first and wait before converting anything.
+5. If `course-lab-final-staging` emitted normalized `comparison_cases`, pass that summary JSON to `stage_picture_results.py` so same-case simulation images are copied into `picture-results/comparison-cases/`.
+6. Convert `picture_results_manifest.json` into `picture_evidence_plan.json` and `picture_evidence_plan.md` with `plan_picture_evidence.py`.
+7. If signed record sheets exist, run `stage_signatory_pages.py` and keep the emitted LaTeX snippet separate from the scientific results figures.
+8. Use the staged draft as the placement surface and apply late picture placement near the already assembled figure-relevant content without rewriting non-figure prose.
+9. Review grouping warnings, unmapped evidence units, and representative-subset choices before finalizing late picture placement.
+10. Prefer same-case paired comparison units when both observed and simulation assets are available, placing experiment and simulation pictures together rather than in disconnected figure groups.
+11. If the staged raster-image pool looks heavy against the `15 MB` coordination target, invoke `$compress-png` before handing off to `course-lab-finalize-qc`.
+12. Keep compression in the same image format unless that still cannot get the asset pool under control.
+13. If cross-format conversion looks necessary after same-format compression attempts, ask the user for confirmation first and wait before converting anything.
 
 ## Quick Reference
 
@@ -103,6 +112,7 @@ python3 /root/.codex/skills/course-lab-figure-evidence/scripts/stage_signatory_p
 - This skill does not own interpretation prose or discussion synthesis.
 - Keep parent-skill path dependencies out of the workflow. Use the copied local scripts in this folder instead of the old `course-lab-report` folder.
 - Preserve low-confidence mapping as warnings and placeholders instead of silently forcing a subsection or caption.
+- Do not let captions or placement notes sound like workflow logs. Prefer neutral lab-report naming based on the file name stem or the handout description.
 - Do not fold signatory pages into the scientific results discussion.
 - Prefer same-format compression first. Do not switch staged images to another format unless necessary, and ask the user for confirmation first before any such conversion.
 
@@ -113,6 +123,8 @@ python3 /root/.codex/skills/course-lab-figure-evidence/scripts/stage_signatory_p
 - Reclaiming handout-derived theory images that were already owned by `course-lab-experiment-principle`.
 - Guessing through ambiguous figure grouping instead of surfacing a visible question.
 - Treating image-size guidance as if this skill owns the final compile-and-QC decision.
+- Letting signatory-page captions drift into the footer by widening portrait scans without a height cap.
+- Writing captions with provenance wording such as `source archive`, `staged evidence set`, `source label`, `metadata`, or `evidence pool`.
 - Converting PNG assets to JPEG immediately instead of trying same-format compression first and getting user confirmation before any format switch.
 
 ## Resources

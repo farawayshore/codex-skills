@@ -179,6 +179,57 @@ class PlanPictureEvidenceTests(unittest.TestCase):
         self.assertTrue(unit["warnings"])
         self.assertEqual(unit["mapping_confidence"], "low")
 
+    def test_case_matched_observed_and_simulation_entries_become_paired_comparisons(self) -> None:
+        manifest = {
+            "entries": [
+                {
+                    "group": "LX2",
+                    "relative_output_path": "LX2/1.experimental-pattern.jpg",
+                    "case_ids": ["case-1"],
+                    "evidence_role": "observed",
+                    "sequence_serial": None,
+                },
+                {
+                    "group": "comparison-cases/case-1",
+                    "relative_output_path": "comparison-cases/case-1/case-1-simulation.png",
+                    "case_ids": ["case-1"],
+                    "evidence_role": "comparison",
+                    "sequence_serial": None,
+                },
+                {
+                    "group": "LX2",
+                    "relative_output_path": "LX2/2.experimental-pattern.jpg",
+                    "case_ids": ["case-2"],
+                    "evidence_role": "observed",
+                    "sequence_serial": None,
+                },
+                {
+                    "group": "comparison-cases/case-2",
+                    "relative_output_path": "comparison-cases/case-2/case-2-simulation.png",
+                    "case_ids": ["case-2"],
+                    "evidence_role": "comparison",
+                    "sequence_serial": None,
+                },
+            ],
+            "sequence_groups": [],
+        }
+
+        payload, markdown = self.run_planner(manifest)
+        paired_units = [unit for unit in payload["evidence_units"] if unit["selection_policy"] == "paired_comparison"]
+
+        self.assertEqual(len(paired_units), 2)
+        first = next(unit for unit in paired_units if unit["group_id"] == "comparison-case-1")
+        self.assertEqual(first["target_subsection"], "Comparison")
+        self.assertEqual(first["mapping_confidence"], "high")
+        self.assertEqual(
+            first["selected_entries"],
+            [
+                "LX2/1.experimental-pattern.jpg",
+                "comparison-cases/case-1/case-1-simulation.png",
+            ],
+        )
+        self.assertIn("comparison-case-1", markdown)
+
 
 if __name__ == "__main__":
     unittest.main()

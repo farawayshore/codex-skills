@@ -1,0 +1,18 @@
+{
+  "discussion_candidates": [
+    {
+      "title": "Explain the main trend",
+      "confidence_level": "high",
+      "source_group_ids": [
+        "z-cut-teo2"
+      ]
+    },
+    {
+      "title": "Interpret the mystery image carefully",
+      "confidence_level": "low",
+      "source_group_ids": [
+        "mystery-image"
+      ]
+    }
+  ]
+}

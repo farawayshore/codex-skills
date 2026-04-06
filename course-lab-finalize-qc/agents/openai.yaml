@@ -1,0 +1,4 @@
+interface:
+  display_name: "Course Lab Finalize QC"
+  short_description: "Compile, quality-check, and hand off final lab reports"
+  default_prompt: "Use $course-lab-finalize-qc only after course-lab-final-staging and course-lab-figure-evidence have already finished the draft. Use the local copied tools in this folder to refresh build.sh, compile the report, run local QC, enforce the 20 MB PDF-size gate, record the compiled PDF page count, warn when the report falls outside the preferred 20-30 page band, hand oversized PDFs off to compress-png, and do not write or rewrite report content."

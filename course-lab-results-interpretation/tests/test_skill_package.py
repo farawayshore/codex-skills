@@ -15,6 +15,7 @@ class CourseLabResultsInterpretationPackageTests(unittest.TestCase):
             SKILL_DIR / "agents" / "openai.yaml",
             SKILL_DIR / "scripts" / "common.py",
             SKILL_DIR / "scripts" / "build_results_interpretation.py",
+            SKILL_DIR / "scripts" / "stage_reference_values.py",
             SKILL_DIR / "tests" / "baseline_failures.md",
         ]
 
@@ -31,12 +32,17 @@ class CourseLabResultsInterpretationPackageTests(unittest.TestCase):
             "/root/.codex/skills/course-lab-results-interpretation/scripts/build_results_interpretation.py",
             text,
         )
+        self.assertIn(
+            "/root/.codex/skills/course-lab-results-interpretation/scripts/stage_reference_values.py",
+            text,
+        )
         self.assertIn("artifact-only", text.lower())
         self.assertIn("unresolved", text.lower())
         self.assertIn("handout", text.lower())
         self.assertIn("read the normalized handout first", text.lower())
         self.assertIn("simulation", text.lower())
         self.assertIn("comparison_records", text)
+        self.assertIn("internet", text.lower())
         self.assertIn("discussion", text.lower())
         self.assertNotIn("modern-physics-latex-report-rennovated/scripts", text)
 
@@ -53,6 +59,7 @@ class CourseLabResultsInterpretationPackageTests(unittest.TestCase):
         self.assertIn("unresolved", text.lower())
         self.assertIn("processed-data", text.lower())
         self.assertIn("simulation", text.lower())
+        self.assertIn("internet", text.lower())
         self.assertIn("do not mutate", text.lower())
 
     def test_parent_skill_mentions_results_interpretation_subskill(self) -> None:

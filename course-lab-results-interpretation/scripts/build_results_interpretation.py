@@ -14,6 +14,14 @@ from common import (
 )
 
 
+COMPARISON_LANE_BY_BASIS = {
+    "handout_standard": "handout_standard_vs_data",
+    "internet_reference": "internet_reference_vs_data",
+    "theoretical_computation": "theoretical_computation_vs_data",
+    "theory_reference": "theory_reference_vs_data",
+}
+
+
 def build_result_inventory(processed_payload: dict) -> list[dict]:
     inventory = []
     for entry in processed_payload.get("results", []):
@@ -30,13 +38,41 @@ def build_result_inventory(processed_payload: dict) -> list[dict]:
     return inventory
 
 
-def build_reference_index(reference_payload: dict | None) -> dict[str, dict]:
+def build_reference_index(reference_payload: dict | None) -> dict[str, list[dict]]:
     if not reference_payload:
         return {}
+    index: dict[str, list[dict]] = {}
+    for entry in reference_payload.get("references", []):
+        if not isinstance(entry, dict):
+            continue
+        name = entry.get("name")
+        if not name:
+            continue
+        index.setdefault(name, []).append(entry)
+    return index
+
+
+def parse_comparison_requirements(reference_payload: dict | None) -> dict[str, list[str]]:
+    if not reference_payload:
+        return {"required_bases": [], "optional_bases": []}
+
+    payload = reference_payload.get("comparison_requirements", {})
+    if not isinstance(payload, dict):
+        return {"required_bases": [], "optional_bases": []}
+
+    required_bases = [
+        value
+        for value in payload.get("required_bases", [])
+        if isinstance(value, str) and value.strip()
+    ]
+    optional_bases = [
+        value
+        for value in payload.get("optional_bases", [])
+        if isinstance(value, str) and value.strip()
+    ]
     return {
-        entry["name"]: entry
-        for entry in reference_payload.get("references", [])
-        if isinstance(entry, dict) and entry.get("name")
+        "required_bases": required_bases,
+        "optional_bases": optional_bases,
     }
 
 
@@ -93,6 +129,28 @@ def parse_required_result_families(text: str) -> list[str]:
     return []
 
 
+def build_numeric_delta_fields(
+    *,
+    observed_value: object,
+    baseline_value: object,
+    observed_unit: object,
+    baseline_unit: object,
+) -> dict[str, float | None]:
+    if not isinstance(observed_value, (int, float)) or not isinstance(baseline_value, (int, float)):
+        return {}
+    if baseline_unit and observed_unit and str(observed_unit) != str(baseline_unit):
+        return {}
+
+    absolute_difference = float(observed_value) - float(baseline_value)
+    relative_difference = None
+    if float(baseline_value) != 0.0:
+        relative_difference = absolute_difference / float(baseline_value)
+    return {
+        "absolute_difference": absolute_difference,
+        "relative_difference": relative_difference,
+    }
+
+
 def enrich_inventory_with_optional_sources(
     inventory: list[dict],
     plots_payload: dict | None,
@@ -116,7 +174,8 @@ def build_comparison_records(
     inventory: list[dict],
     expectations: dict[str, object],
     modeling_index: dict[str, dict],
-    reference_index: dict[str, dict],
+    reference_index: dict[str, list[dict]],
+    comparison_requirements: dict[str, list[str]],
     unresolved: list[str],
 ) -> list[dict]:
     records: list[dict] = []
@@ -155,17 +214,24 @@ def build_comparison_records(
             if model is None:
                 continue
             matched_simulation_names.append(entry["name"])
-            records.append(
-                {
-                    "lane": "simulation_vs_data",
-                    "name": entry["name"],
-                    "status": "compared",
-                    "data_value": entry.get("value"),
-                    "data_unit": entry.get("unit"),
-                    "simulation_value": model.get("value"),
-                    "simulation_unit": model.get("unit"),
-                }
+            record = {
+                "lane": "simulation_vs_data",
+                "name": entry["name"],
+                "status": "compared",
+                "data_value": entry.get("value"),
+                "data_unit": entry.get("unit"),
+                "simulation_value": model.get("value"),
+                "simulation_unit": model.get("unit"),
+            }
+            record.update(
+                build_numeric_delta_fields(
+                    observed_value=entry.get("value"),
+                    baseline_value=model.get("value"),
+                    observed_unit=entry.get("unit"),
+                    baseline_unit=model.get("unit"),
+                )
             )
+            records.append(record)
         if not matched_simulation_names:
             target_names = [
                 name
@@ -178,29 +244,51 @@ def build_comparison_records(
                 )
 
     for entry in inventory:
-        reference = reference_index.get(entry["name"])
-        if reference is None:
+        references = reference_index.get(entry["name"], [])
+        if not references:
             unresolved.append(f"No theory/reference value available for {entry['name']}")
             continue
-        records.append(
-            {
-                "lane": "theory_reference_vs_data",
+        seen_bases: set[str] = set()
+        for reference in references:
+            basis = str(reference.get("comparison_basis") or "theory_reference").strip()
+            lane = COMPARISON_LANE_BY_BASIS.get(basis, "theory_reference_vs_data")
+            seen_bases.add(basis)
+            record = {
+                "lane": lane,
                 "name": entry["name"],
                 "status": "compared",
                 "data_value": entry.get("value"),
                 "data_unit": entry.get("unit"),
                 "reference_value": reference.get("value"),
                 "reference_unit": reference.get("unit"),
+                "reference_label": reference.get("label"),
+                "reference_source": reference.get("source"),
+                "comparison_basis": basis,
             }
-        )
+            record.update(
+                build_numeric_delta_fields(
+                    observed_value=entry.get("value"),
+                    baseline_value=reference.get("value"),
+                    observed_unit=entry.get("unit"),
+                    baseline_unit=reference.get("unit"),
+                )
+            )
+            records.append(record)
+
+        for basis in comparison_requirements.get("required_bases", []):
+            if basis not in seen_bases:
+                unresolved.append(
+                    f"Missing required {basis.replace('_', ' ')} comparison for {entry['name']}"
+                )
 
     if simulation_required and expectations.get("compare_simulation_to_theory"):
         for name, model in modeling_index.items():
-            reference = reference_index.get(name)
-            if reference is None:
+            references = reference_index.get(name, [])
+            if not references:
                 continue
-            records.append(
-                {
+            for reference in references:
+                basis = str(reference.get("comparison_basis") or "theory_reference").strip()
+                record = {
                     "lane": "simulation_vs_theory_reference",
                     "name": name,
                     "status": "compared",
@@ -208,8 +296,19 @@ def build_comparison_records(
                     "simulation_unit": model.get("unit"),
                     "reference_value": reference.get("value"),
                     "reference_unit": reference.get("unit"),
+                    "reference_label": reference.get("label"),
+                    "reference_source": reference.get("source"),
+                    "comparison_basis": basis,
                 }
-            )
+                record.update(
+                    build_numeric_delta_fields(
+                        observed_value=model.get("value"),
+                        baseline_value=reference.get("value"),
+                        observed_unit=model.get("unit"),
+                        baseline_unit=reference.get("unit"),
+                    )
+                )
+                records.append(record)
 
     if simulation_required:
         inventory_names = {entry["name"] for entry in inventory}
@@ -320,12 +419,14 @@ def main() -> int:
     inventory = build_result_inventory(processed_payload)
     enrich_inventory_with_optional_sources(inventory, plots_payload, modeling_payload)
     reference_index = build_reference_index(reference_payload)
+    comparison_requirements = parse_comparison_requirements(reference_payload)
     modeling_index = build_modeling_index(modeling_payload)
     comparison_records = build_comparison_records(
         inventory,
         expectations,
         modeling_index,
         reference_index,
+        comparison_requirements,
         unresolved,
     )
     interpretation_items = build_interpretation_items(inventory, comparison_records)

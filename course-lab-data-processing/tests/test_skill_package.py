@@ -16,6 +16,7 @@ class CourseLabDataProcessingPackageTests(unittest.TestCase):
             SKILL_DIR / "scripts" / "common.py",
             SKILL_DIR / "scripts" / "compute_uncertainties.py",
             SKILL_DIR / "scripts" / "propagate_uncertainties.py",
+            SKILL_DIR / "scripts" / "render_calculation_details.py",
         ]
 
         missing = [str(path.relative_to(SKILL_DIR)) for path in required_paths if not path.exists()]
@@ -26,6 +27,7 @@ class CourseLabDataProcessingPackageTests(unittest.TestCase):
 
         self.assertIn("/root/.codex/skills/course-lab-data-processing/scripts/compute_uncertainties.py", text)
         self.assertIn("/root/.codex/skills/course-lab-data-processing/scripts/propagate_uncertainties.py", text)
+        self.assertIn("/root/.codex/skills/course-lab-data-processing/scripts/render_calculation_details.py", text)
         self.assertIn("k=2", text)
         self.assertIn("standalone", text)
         self.assertIn("read the handout first", text.lower())
@@ -33,6 +35,8 @@ class CourseLabDataProcessingPackageTests(unittest.TestCase):
         self.assertIn("2r", text)
         self.assertIn("two_r / 2", text)
         self.assertIn("propagation", text.lower())
+        self.assertIn("calculation_details_manifest.json", text)
+        self.assertIn("helper quantity", text.lower())
         self.assertNotIn("modern-physics-latex-report-rennovated/scripts/compute_uncertainties.py", text)
 
     def test_parent_skill_mentions_uncertainty_subskill(self) -> None:

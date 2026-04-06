@@ -111,14 +111,99 @@ def sample_label_from_group(group: str, entries: list[dict[str, object]]) -> str
     return "Unknown sample"
 
 
+def entry_case_ids(entry: dict[str, object]) -> list[str]:
+    raw = entry.get("case_ids")
+    if isinstance(raw, list):
+        return [str(item).strip() for item in raw if str(item).strip()]
+    return []
+
+
+def entry_role(entry: dict[str, object]) -> str:
+    return str(entry.get("evidence_role") or "observed").strip() or "observed"
+
+
+def paired_comparison_units(entries: list[dict[str, object]]) -> tuple[list[dict[str, object]], set[str], list[str]]:
+    by_case: dict[str, dict[str, list[dict[str, object]]]] = {}
+    for item in entries:
+        if not isinstance(item, dict):
+            continue
+        case_ids = entry_case_ids(item)
+        if len(case_ids) != 1:
+            continue
+        role = entry_role(item)
+        if role not in {"observed", "comparison"}:
+            continue
+        by_case.setdefault(case_ids[0], {}).setdefault(role, []).append(item)
+
+    evidence_units: list[dict[str, object]] = []
+    consumed_paths: set[str] = set()
+    warnings: list[str] = []
+    for case_id in sorted(by_case):
+        observed_entries = by_case[case_id].get("observed", [])
+        comparison_entries = by_case[case_id].get("comparison", [])
+        if not observed_entries or not comparison_entries:
+            continue
+        if len(observed_entries) != 1 or len(comparison_entries) != 1:
+            warnings.append(
+                f"Could not confidently pair observed and comparison evidence for {case_id}; expected exactly one of each."
+            )
+            continue
+
+        observed_entry = observed_entries[0]
+        comparison_entry = comparison_entries[0]
+        observed_rel = str(observed_entry.get("relative_output_path") or "")
+        comparison_rel = str(comparison_entry.get("relative_output_path") or "")
+        if not observed_rel or not comparison_rel:
+            warnings.append(f"Skipped paired comparison for {case_id} because a staged relative path was missing.")
+            continue
+
+        consumed_paths.add(observed_rel)
+        consumed_paths.add(comparison_rel)
+        evidence_units.append(
+            {
+                "group_id": safe_label(f"comparison-{case_id}", default="comparison-case"),
+                "case_id": case_id,
+                "sample_label": case_id.replace("case-", "Case "),
+                "method_label": "experiment vs simulation",
+                "source_group_paths": list(
+                    dict.fromkeys(
+                        [
+                            str(observed_entry.get("group") or ""),
+                            str(comparison_entry.get("group") or ""),
+                        ]
+                    )
+                ),
+                "target_subsection": "Comparison",
+                "analysis_focus": "Place the same-case experimental pattern next to the corresponding non-radial simulation output.",
+                "selection_policy": "paired_comparison",
+                "selected_entries": [observed_rel, comparison_rel],
+                "omitted_entries": [],
+                "placement_mode": "same_subsection_local_float",
+                "caption_metadata": {
+                    "sample_label": case_id.replace("case-", "Case "),
+                    "method_label": "experiment vs simulation",
+                },
+                "mapping_confidence": "high",
+                "warnings": [],
+            }
+        )
+
+    return evidence_units, consumed_paths, warnings
+
+
 def build_evidence_plan(manifest: dict[str, object]) -> dict[str, object]:
     entries = manifest.get("entries") or []
     if not isinstance(entries, list):
         entries = []
 
+    paired_units, consumed_paths, warnings = paired_comparison_units(entries)
+
     grouped_entries: dict[str, list[dict[str, object]]] = {}
     for item in entries:
         if not isinstance(item, dict):
+            continue
+        relative_output_path = str(item.get("relative_output_path") or "")
+        if relative_output_path and relative_output_path in consumed_paths:
             continue
         group = str(item.get("group") or "")
         grouped_entries.setdefault(group, []).append(item)
@@ -132,8 +217,7 @@ def build_evidence_plan(manifest: dict[str, object]) -> dict[str, object]:
         if isinstance(item_entries, list):
             sequence_lookup[group] = [entry for entry in item_entries if isinstance(entry, dict)]
 
-    evidence_units: list[dict[str, object]] = []
-    warnings: list[str] = []
+    evidence_units: list[dict[str, object]] = list(paired_units)
 
     for group in sorted(grouped_entries):
         items = sorted(grouped_entries[group], key=lambda entry: str(entry.get("relative_output_path") or ""))

@@ -418,6 +418,188 @@ class CourseLabResultsInterpretationTests(unittest.TestCase):
             )
             self.assertIn("comparison records", output_markdown.read_text(encoding="utf-8").lower())
 
+    def test_cli_separates_handout_internet_and_theory_justification_lanes(self) -> None:
+        self.assertTrue(SCRIPT_PATH.exists(), f"missing script: {SCRIPT_PATH}")
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            handout_sections_markdown = tmp / "sections.md"
+            processed_data_json = tmp / "processed_data.json"
+            references_json = tmp / "reference_values.json"
+            output_json = tmp / "results_interpretation.json"
+            output_markdown = tmp / "results_interpretation.md"
+            output_unresolved = tmp / "results_interpretation_unresolved.md"
+
+            write_handout_markdown(
+                handout_sections_markdown,
+                required_result_families=("youngs_modulus",),
+            )
+            processed_data_json.write_text(
+                json.dumps(
+                    {
+                        "results": [
+                            {
+                                "name": "youngs_modulus",
+                                "label": "Young's modulus",
+                                "value": 2.03e11,
+                                "unit": "Pa",
+                                "kind": "derived",
+                            }
+                        ]
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+            references_json.write_text(
+                json.dumps(
+                    {
+                        "comparison_requirements": {
+                            "required_bases": [
+                                "internet_reference",
+                                "theoretical_computation",
+                            ],
+                            "optional_bases": ["handout_standard"],
+                        },
+                        "references": [
+                            {
+                                "name": "youngs_modulus",
+                                "label": "Handout stainless reference",
+                                "value": 1.95e11,
+                                "unit": "Pa",
+                                "comparison_basis": "handout_standard",
+                                "source": "notes/lx1_sections.md:159",
+                            },
+                            {
+                                "name": "youngs_modulus",
+                                "label": "MatWeb stainless steel reference",
+                                "value": 2.00e11,
+                                "unit": "Pa",
+                                "comparison_basis": "internet_reference",
+                                "source": "https://example.com/matweb",
+                            },
+                            {
+                                "name": "youngs_modulus",
+                                "label": "Beam-model inversion",
+                                "value": 2.01e11,
+                                "unit": "Pa",
+                                "comparison_basis": "theoretical_computation",
+                                "source": "analysis/theory_checks.json:youngs_modulus",
+                            },
+                        ],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+
+            completed = run_cli(
+                "--handout-sections-markdown",
+                str(handout_sections_markdown),
+                "--processed-data-json",
+                str(processed_data_json),
+                "--references-json",
+                str(references_json),
+                "--output-json",
+                str(output_json),
+                "--output-markdown",
+                str(output_markdown),
+                "--output-unresolved",
+                str(output_unresolved),
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            payload = json.loads(output_json.read_text(encoding="utf-8"))
+            lanes = {entry["lane"] for entry in payload["comparison_records"]}
+            self.assertIn("handout_standard_vs_data", lanes)
+            self.assertIn("internet_reference_vs_data", lanes)
+            self.assertIn("theoretical_computation_vs_data", lanes)
+            self.assertIn("young's modulus", output_markdown.read_text(encoding="utf-8").lower())
+
+    def test_cli_records_unresolved_when_required_justification_lane_is_missing(self) -> None:
+        self.assertTrue(SCRIPT_PATH.exists(), f"missing script: {SCRIPT_PATH}")
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            handout_sections_markdown = tmp / "sections.md"
+            processed_data_json = tmp / "processed_data.json"
+            references_json = tmp / "reference_values.json"
+            output_json = tmp / "results_interpretation.json"
+            output_markdown = tmp / "results_interpretation.md"
+            output_unresolved = tmp / "results_interpretation_unresolved.md"
+
+            write_handout_markdown(
+                handout_sections_markdown,
+                required_result_families=("characteristic_frequency",),
+            )
+            processed_data_json.write_text(
+                json.dumps(
+                    {
+                        "results": [
+                            {
+                                "name": "characteristic_frequency",
+                                "label": "characteristic frequency",
+                                "value": 1830.8,
+                                "unit": "Hz",
+                                "kind": "reported",
+                            }
+                        ]
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+            references_json.write_text(
+                json.dumps(
+                    {
+                        "comparison_requirements": {
+                            "required_bases": [
+                                "internet_reference",
+                                "theoretical_computation",
+                            ]
+                        },
+                        "references": [
+                            {
+                                "name": "characteristic_frequency",
+                                "label": "Published brass plate mode range",
+                                "value": 1800.0,
+                                "unit": "Hz",
+                                "comparison_basis": "internet_reference",
+                                "source": "https://example.com/brass-plate",
+                            }
+                        ],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+
+            completed = run_cli(
+                "--handout-sections-markdown",
+                str(handout_sections_markdown),
+                "--processed-data-json",
+                str(processed_data_json),
+                "--references-json",
+                str(references_json),
+                "--output-json",
+                str(output_json),
+                "--output-markdown",
+                str(output_markdown),
+                "--output-unresolved",
+                str(output_unresolved),
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            payload = json.loads(output_json.read_text(encoding="utf-8"))
+            self.assertTrue(payload["unresolved"])
+            unresolved_text = output_unresolved.read_text(encoding="utf-8").lower()
+            self.assertIn("theoretical computation", unresolved_text)
+            self.assertIn("characteristic_frequency", unresolved_text)
+
     def test_cli_records_unresolved_conflict_when_json_and_markdown_disagree(self) -> None:
         self.assertTrue(SCRIPT_PATH.exists(), f"missing script: {SCRIPT_PATH}")
 

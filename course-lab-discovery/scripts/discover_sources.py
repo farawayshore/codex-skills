@@ -21,6 +21,7 @@ from common import (
     expand_query_variants,
     iter_files,
     normalize_for_match,
+    path_match_texts,
     score_query_variants,
     summarize_result_dir,
     write_json,
@@ -32,6 +33,8 @@ DATA_SUFFIXES = {".csv", ".json", ".md", ".pdf", ".png", ".jpg", ".jpeg", ".txt"
 PIC_RESULT_SUFFIXES = {".pdf", ".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp"}
 TEMPLATE_SUFFIXES = {".tex"}
 IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg"}
+DATA_TABLE_SUFFIXES = {".csv", ".tsv", ".xls", ".xlsx"}
+DATA_SCAN_SUFFIXES = {".pdf", ".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp"}
 SIMULATION_FILE_SUFFIXES = {".py", ".wl", ".m", ".mlx", ".ipynb"}
 SIMULATION_HINTS = ("simulation", "simulations", "simulator", "mathematica", "matlab", "simulink", "wolfram")
 
@@ -248,6 +251,130 @@ def all_paths(paths: list[Path]) -> list[dict[str, object]]:
     return [ScoredPath(path=str(path), score=0.0, label=path.name, details=[]).to_dict() for path in sorted(paths)]
 
 
+def ancestor_chain_within_root(path: Path, root: Path) -> list[Path]:
+    resolved_root = root.resolve()
+    ancestors: list[Path] = []
+    current = path.parent.resolve()
+    while current != resolved_root and resolved_root in current.parents:
+        ancestors.append(current)
+        current = current.parent
+    return list(reversed(ancestors))
+
+
+def best_data_group_root(path: Path, query: str) -> tuple[Path | None, float, list[str]]:
+    best_root: Path | None = None
+    best_score = 0.0
+    best_details: list[str] = []
+    strong_match_root: Path | None = None
+    strong_match_score = 0.0
+    strong_match_details: list[str] = []
+    query_variants = expand_query_variants(query)
+
+    for ancestor in ancestor_chain_within_root(path, DATA_ROOT):
+        score, details = score_query_variants(query_variants, path_match_texts(ancestor, library_root=DATA_ROOT))
+        if score > best_score:
+            best_root = ancestor
+            best_score = score
+            best_details = details
+
+        detail_set = set(details)
+        has_strong_signal = any(
+            detail == "exact-match"
+            or detail == "contains-query"
+            or detail.startswith("token-overlap:")
+            for detail in detail_set
+        )
+        if has_strong_signal and (strong_match_root is None or score > strong_match_score):
+            strong_match_root = ancestor
+            strong_match_score = score
+            strong_match_details = details
+
+    if strong_match_root is not None:
+        return strong_match_root, strong_match_score, strong_match_details
+    return best_root, best_score, best_details
+
+
+def classify_data_file(path: Path) -> str:
+    suffix = path.suffix.lower()
+    if suffix in DATA_TABLE_SUFFIXES:
+        return "table"
+    if suffix in DATA_SCAN_SUFFIXES:
+        return "scan"
+    return "other"
+
+
+def data_candidates(query: str, max_results: int) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
+    data_files = list(iter_files(DATA_ROOT, suffixes=DATA_SUFFIXES))
+    scored_items = score_paths(query, data_files, library_root=DATA_ROOT)
+    scored_by_path = {item.path: item for item in scored_items}
+
+    grouped_paths: dict[Path, list[Path]] = {}
+    group_scores: dict[Path, float] = {}
+    group_details: dict[Path, list[str]] = {}
+    for item in scored_items:
+        if item.score <= 0:
+            continue
+        group_root, group_score, details = best_data_group_root(Path(item.path), query)
+        if group_root is None or group_score <= 0:
+            continue
+        grouped_paths.setdefault(group_root, []).append(Path(item.path))
+        if group_score > group_scores.get(group_root, 0.0):
+            group_scores[group_root] = group_score
+            group_details[group_root] = details
+
+    data_groups: list[dict[str, object]] = []
+    ranked_group_roots = sorted(grouped_paths, key=lambda path: (-group_scores[path], str(path).lower()))
+    if ranked_group_roots:
+        best_group_score = group_scores[ranked_group_roots[0]]
+        if best_group_score >= 80:
+            ranked_group_roots = [
+                path for path in ranked_group_roots if group_scores[path] >= (best_group_score * 0.6)
+            ]
+    for group_root in ranked_group_roots:
+        files = sorted(
+            grouped_paths[group_root],
+            key=lambda path: (
+                {"table": 0, "scan": 1, "other": 2}[classify_data_file(path)],
+                -scored_by_path[str(path)].score,
+                path.name.lower(),
+            ),
+        )
+        group_payload = {
+            "path": str(group_root),
+            "score": round(group_scores[group_root], 3),
+            "label": group_root.name,
+            "details": group_details[group_root],
+            "csv_files": [],
+            "scan_files": [],
+            "other_files": [],
+        }
+        for file_path in files:
+            item = scored_by_path[str(file_path)].to_dict()
+            kind = classify_data_file(file_path)
+            if kind == "table":
+                group_payload["csv_files"].append(item)
+            elif kind == "scan":
+                group_payload["scan_files"].append(item)
+            else:
+                group_payload["other_files"].append(item)
+        data_groups.append(group_payload)
+
+    if not data_groups:
+        return top_or_all(scored_items, max_results), []
+
+    flattened: list[dict[str, object]] = []
+    seen_paths: set[str] = set()
+    for group in data_groups:
+        for key in ("csv_files", "scan_files", "other_files"):
+            for item in group[key]:
+                item_path = str(item["path"])
+                if item_path in seen_paths:
+                    continue
+                seen_paths.add(item_path)
+                flattened.append(item)
+    return flattened, data_groups
+
+
 def discovery_query(course: str | None, experiment: str) -> str:
     if not course:
         return experiment
@@ -348,6 +475,7 @@ def main() -> int:
     handouts = list(iter_files(HANDOUT_LIBRARY_ROOT, suffixes=PDF_SUFFIXES, exclude_parts={"pdf_decoded"}))
     references = list(iter_files(REFERENCE_LIBRARY_ROOT, suffixes=PDF_SUFFIXES, exclude_parts={"pdf_decoded"}))
     data_files = list(iter_files(DATA_ROOT, suffixes=DATA_SUFFIXES))
+    ranked_data_files, data_groups = data_candidates(args.experiment, args.max_results)
     picture_result_files = list(iter_files(PIC_RESULT_ROOT, suffixes=PIC_RESULT_SUFFIXES)) if PIC_RESULT_ROOT.exists() else []
     signatory_files = list(iter_files(SIGNATORY_ROOT, suffixes=PDF_SUFFIXES | IMAGE_SUFFIXES)) if SIGNATORY_ROOT.exists() else []
     templates, excluded_templates = template_groups(args.template_language)
@@ -384,7 +512,8 @@ def main() -> int:
             args.max_results,
         ),
         "reference_decoded_json": decoded_candidates(REFERENCE_LIBRARY_ROOT, query_text, args.max_results),
-        "data_files": top_or_all(score_paths(args.experiment, data_files), args.max_results),
+        "data_files": ranked_data_files,
+        "data_groups": data_groups,
         "picture_result_dirs": picture_result_dir_candidates(args.experiment, args.max_results),
         "picture_result_files": top_or_all(score_paths(args.experiment, picture_result_files), args.max_results),
         "simulation_dirs": simulation_dir_candidates(args.experiment, args.max_results),

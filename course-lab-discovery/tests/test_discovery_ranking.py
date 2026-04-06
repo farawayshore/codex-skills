@@ -11,6 +11,7 @@ if str(SCRIPT_DIR) not in sys.path:
 
 from common import HANDOUT_LIBRARY_ROOT, PIC_RESULT_ROOT, REFERENCE_LIBRARY_ROOT, expand_query_variants  # noqa: E402
 from discover_sources import (  # noqa: E402
+    data_candidates,
     decoded_candidates,
     picture_result_dir_candidates,
     score_paths,
@@ -21,6 +22,48 @@ from discover_sources import (  # noqa: E402
 
 
 class DiscoveryRankingTests(unittest.TestCase):
+    def make_data_tree(self) -> Path:
+        temp_root = Path(tempfile.mkdtemp())
+
+        mechanics_root = temp_root / "Introductory Physics Experiments for Undergraduates: discovery" / "mechanics"
+        (mechanics_root / "LX2" / "fuji_measurements" / "source_exports").mkdir(parents=True)
+        (mechanics_root / "LX2" / "fuji_measurements" / "source_images").mkdir(parents=True)
+
+        for name in (
+            "case1-f=1.8308kHz,m=0,n=4_measured.csv",
+            "case2-f=4.3169kHz,m=7,n=3_measured.csv",
+            "case3-f=5.7848kHz,m=4,n=5_measured.csv",
+            "case4-f=6.3054kHz,m=5,n=5_measured.csv",
+            "case5-f=11.165kHz,m=6,n=7_measured.csv",
+        ):
+            (mechanics_root / "LX2" / "fuji_measurements" / name).write_text("x,y\n1,2\n", encoding="utf-8")
+
+        for name in (
+            "case4-f=6.3054kHz,m=5,n=5_full_export.csv",
+            "case5-f=11.165kHz,m=6,n=7_full_export.csv",
+        ):
+            (mechanics_root / "LX2" / "fuji_measurements" / "source_exports" / name).write_text(
+                "x,y\n1,2\n",
+                encoding="utf-8",
+            )
+
+        (mechanics_root / "mechanics-data.pdf").write_text("% scanned data pages\n", encoding="utf-8")
+        for name in (
+            "case1-f=1.8308kHz,m=0,n=4_measured.PNG",
+            "case2-f=4.3169kHz,m=7,n=3_measured.PNG",
+        ):
+            (mechanics_root / "LX2" / "fuji_measurements" / "source_images" / name).write_text(
+                "fake image bytes\n",
+                encoding="utf-8",
+            )
+
+        optics_root = temp_root / "Modern Physics Experiments"
+        optics_root.mkdir(parents=True)
+        (optics_root / "crystal_optics_data.pdf").write_text("% unrelated data\n", encoding="utf-8")
+
+        self.addCleanup(lambda: __import__("shutil").rmtree(temp_root))
+        return temp_root
+
     def make_template_tree(self) -> Path:
         temp_root = Path(tempfile.mkdtemp())
 
@@ -101,6 +144,35 @@ class DiscoveryRankingTests(unittest.TestCase):
     def test_unrelated_query_reports_simulation_not_exist(self) -> None:
         self.assertEqual(simulation_dir_candidates("crystal optics", 5), "not exist")
         self.assertEqual(simulation_file_candidates("crystal optics", 5), "not exist")
+
+    def test_data_candidates_include_all_csvs_for_multi_file_experiment_bundle(self) -> None:
+        data_root = self.make_data_tree()
+
+        with mock.patch("discover_sources.DATA_ROOT", data_root):
+            data_files, data_groups = data_candidates("mechanics", 4)
+
+        csv_names = {
+            Path(item["path"]).name
+            for item in data_files
+            if Path(item["path"]).suffix.lower() == ".csv"
+        }
+        self.assertEqual(
+            csv_names,
+            {
+                "case1-f=1.8308kHz,m=0,n=4_measured.csv",
+                "case2-f=4.3169kHz,m=7,n=3_measured.csv",
+                "case3-f=5.7848kHz,m=4,n=5_measured.csv",
+                "case4-f=6.3054kHz,m=5,n=5_measured.csv",
+                "case5-f=11.165kHz,m=6,n=7_measured.csv",
+                "case4-f=6.3054kHz,m=5,n=5_full_export.csv",
+                "case5-f=11.165kHz,m=6,n=7_full_export.csv",
+            },
+        )
+        self.assertGreater(len(csv_names), 4)
+        self.assertEqual(len(data_groups), 1)
+        self.assertEqual(Path(data_groups[0]["path"]).name, "mechanics")
+        self.assertEqual(len(data_groups[0]["csv_files"]), 7)
+        self.assertEqual(len(data_groups[0]["scan_files"]), 3)
 
     def test_template_groups_include_english_single_tex_and_chinese_bundle(self) -> None:
         template_root = self.make_template_tree()

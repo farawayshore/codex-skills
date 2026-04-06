@@ -1,0 +1,4 @@
+interface:
+  display_name: "Course Lab Final Staging"
+  short_description: "Assemble late-stage non-figure lab report drafts"
+  default_prompt: "Use $course-lab-final-staging as the late-stage non-figure writer with local copied tools only. Preserve direct results and handout-demanded indirect results case by case, narrate the data-processing procedure and the corresponding uncertainty-calculation procedure from upstream artifacts, include modeling results and appendix code when available, aim for substantive completeness toward a 20-30 page two-column final report, do not place late figures, do not compile the report, and do not take over final QC."

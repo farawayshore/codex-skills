@@ -1,4 +1,4 @@
 interface:
   display_name: "Course Lab Discovery"
   short_description: "Find the right lab-report source set"
-  default_prompt: "Use $course-lab-discovery to identify the best-matching experiment resources, result folders, and template choices before any lab-report drafting or workspace edits, and if you save discovery manifests, name them after the experiment instead of using one shared filename."
+  default_prompt: "Use $course-lab-discovery to identify the best-matching experiment resources, complete multi-file data bundles, result folders, and template choices before any lab-report drafting or workspace edits, and if you save discovery manifests, name them after the experiment instead of using one shared filename."

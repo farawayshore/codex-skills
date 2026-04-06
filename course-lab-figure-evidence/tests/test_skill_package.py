@@ -60,6 +60,19 @@ class CourseLabFigureEvidencePackageTests(unittest.TestCase):
         self.assertIn("course-lab-experiment-principle", agent_prompt)
         self.assertIn("late picture placement", agent_prompt)
 
+    def test_skill_prohibits_provenance_style_caption_language(self) -> None:
+        text = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
+        agent_prompt = (SKILL_DIR / "agents" / "openai.yaml").read_text(encoding="utf-8")
+
+        self.assertIn("source archive", text)
+        self.assertIn("staged evidence set", text)
+        self.assertIn("source label", text)
+        self.assertIn("evidence pool", text)
+        self.assertIn("file name stem", text)
+        self.assertIn("handout-grounded description", text)
+        self.assertIn("source archive", agent_prompt)
+        self.assertIn("file-name-stem", agent_prompt)
+
 
 if __name__ == "__main__":
     unittest.main()

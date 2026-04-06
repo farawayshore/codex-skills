@@ -1,6 +1,6 @@
 ---
 name: course-lab-discovery
-description: Use when a course lab-report run needs course-aware matching of an experiment to local handouts, reference reports, data files, simulation assets, picture-result folders, result directories, or LaTeX templates, especially when the correct source is uncertain or multiple candidates exist.
+description: Use when a course lab-report run needs course-aware matching of an experiment to local handouts, reference reports, multi-file data bundles, simulation assets, picture-result folders, result directories, or LaTeX templates, especially when the correct source is uncertain or one experiment may have multiple raw files and scanned data pages.
 ---
 
 # Course Lab Discovery
@@ -14,11 +14,13 @@ Use the model to derive bilingual search topics at run time. The Python script s
 ## Output Contract
 
 - Use local `scripts/discover_sources.py` as the canonical discovery contract.
-- Produce a ranked view of handouts, decoded JSON, references, data files, simulation directories, simulation files, picture-result directories, picture-result files, signatory files, result directories, language-grouped templates, excluded templates, and warnings.
+- Produce a ranked view of handouts, decoded JSON, references, complete data-file discovery, data groups, simulation directories, simulation files, picture-result directories, picture-result files, signatory files, result directories, language-grouped templates, excluded templates, and warnings.
 - Translate the experiment topic into English and Chinese with the model, run discovery for each query independently, then compare the result sets.
 - Confirm the experiment target and show template options before any later skill mutates files.
 - If the top matches are weak, tied, or zero-score, keep that uncertainty visible and ask the user instead of choosing silently.
 - Template candidates now carry `template_language`, `template_kind`, `template_root`, `template_entry`, and a human-friendly `label`.
+- For mechanics-style or other multi-dataset experiments, discovery must surface all matched tabular data files such as `.csv`, `.tsv`, `.xls`, and `.xlsx`, not only the first few ranked files.
+- When data files cluster under one matched experiment subtree, expose that subtree through `data_groups` and keep companion scan sources such as `data.pdf`, record-book scans, or source images visible alongside the tables.
 
 ## Primary Command
 
@@ -39,7 +41,7 @@ If the report language is already known, pass `--template-language english` or `
 2. Use the model to derive one English and one Chinese search topic for the experiment. If the user already gave both, keep both.
 3. Run `scripts/discover_sources.py` once per query variant with the same `--course`. If the report language is already chosen, also pass `--template-language english|chinese`. If you save manifests, name them after the experiment, for example `/tmp/course-lab-discovery-<experiment-safe-name>-en.json` and `/tmp/course-lab-discovery-<experiment-safe-name>-zh.json`.
 4. Compare the result sets. Prefer candidates that are strong in both runs, and surface disagreements instead of forcing a silent choice.
-5. Review `handouts`, `reference_reports`, `data_files`, `simulation_dirs`, `simulation_files`, `picture_result_dirs`, `picture_result_files`, `signatory_files`, `result_dirs`, `templates`, `excluded_templates`, and `warnings`.
+5. Review `handouts`, `reference_reports`, `data_files`, `data_groups`, `simulation_dirs`, `simulation_files`, `picture_result_dirs`, `picture_result_files`, `signatory_files`, `result_dirs`, `templates`, `excluded_templates`, and `warnings`.
 6. If `template_language_requested` is `null`, show both `templates.english` and `templates.chinese` instead of flattening them into one list.
 7. If `template_language_requested` is `english` or `chinese`, only show that language group and keep the other out of the JSON.
 8. For bundle templates, use the bundle label and `template_root` plus `template_entry`; do not present a bare `main.tex` choice.
@@ -52,7 +54,10 @@ If the report language is already known, pass `--template-language english` or `
 |---|---|
 | Best handout or reference PDF | `handouts`, `reference_reports` |
 | Already-decoded PDF candidates | `handout_decoded_json`, `reference_decoded_json` |
-| Raw or transferred data location | `data_files` |
+| Raw or transferred data location | `data_files`, `data_groups` |
+| Complete CSV or spreadsheet bundle | `data_groups[*].csv_files` |
+| Scanned record-book pages or data PDFs | `data_groups[*].scan_files` |
+| Other experiment-local data artifacts such as notes or README files | `data_groups[*].other_files` |
 | Simulation folders or source files | `simulation_dirs`, `simulation_files` |
 | Picture-result folders and files | `picture_result_dirs`, `picture_result_files` |
 | Signatory inputs | `signatory_files` |
@@ -68,6 +73,8 @@ If the report language is already known, pass `--template-language english` or `
 - Do not hardcode translation aliases inside the Python scorer. Topic translation belongs to the model-driven workflow above.
 - Treat simulation discovery as query-specific. If no simulation candidate seems relevant, return `"not exist"` instead of a low-score guess.
 - Do not reuse a single generic discovery manifest filename across different experiments. Saved discovery JSON should be experiment-specific.
+- For data discovery, completeness beats top-N truncation once a matched experiment bundle is identified. Do not hide later CSV files just because `--max-results` is small.
+- Keep grouped data discovery query-specific. Only surface full CSV and scan bundles for experiment roots that actually match the query; do not inflate weak unrelated folders into fake bundles.
 - Detect template language from the first directory under `AI_works/resources/latex_templet/` and keep template results grouped by that language.
 - Exclude any template path under a directory literally named `dont use`, even if the caller asks for a language-specific view.
 - Do not present bundle templates as a bare `main.tex` option. Use the bundle label and metadata instead.
@@ -81,6 +88,8 @@ If the report language is already known, pass `--template-language english` or `
 - Treating a low-score match as certain because the filename looks close enough. Show the shortlist.
 - Reusing one shared `/tmp/course-lab-discovery.json` file while multiple experiment runs are active.
 - Flattening English and Chinese templates into one mixed list before the user has picked a report language.
+- Letting a multi-file experiment collapse into one or two top-ranked data files. If a mechanics run has seven CSVs and scan pages, discovery should keep that full bundle visible.
+- Returning a pile of unrelated low-score data folders as if they were equivalent bundles. Only strong or near-tied experiment roots should be grouped.
 - Showing a bundle template to the user as plain `main.tex` instead of the actual bundle template name.
 - Jumping into MinerU decoding during discovery. That belongs to `course-lab-handout-normalization`.
 - Copying a template or editing `main.tex` during discovery. That belongs to `course-lab-workspace-template`.

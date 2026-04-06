@@ -43,6 +43,17 @@ class CourseLabFinalStagingPackageTests(unittest.TestCase):
         self.assertIn("20-30", text)
         self.assertIn("course-lab-figure-evidence", text)
         self.assertIn("final qc", text.lower())
+        self.assertIn("explicitly provided", text.lower())
+        self.assertIn("does not discover", text.lower())
+        self.assertIn("partial derivative", text.lower())
+        self.assertIn("substituted", text.lower())
+        self.assertIn("two-column", text.lower())
+        self.assertIn("table", text.lower())
+        self.assertIn("calculation details", text.lower())
+        self.assertIn("calculation-details-manifest", text.lower())
+        self.assertIn("u_a", text)
+        self.assertIn("u_b", text)
+        self.assertIn("u_c", text)
         self.assertNotIn("modern-physics-latex-report-rennovated/scripts", text)
 
     def test_agent_prompt_requires_late_stage_local_writer_behavior(self) -> None:

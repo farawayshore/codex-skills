@@ -1,0 +1,175 @@
+{
+  "title": "Interference and Diffraction",
+  "section_order": [
+    "introduction",
+    "principle",
+    "procedure",
+    "observations",
+    "analysis_cues",
+    "thinking_questions"
+  ],
+  "front_matter": {
+    "heading": "Front Matter",
+    "pages": [
+      1
+    ],
+    "text": "Interference and Diffraction",
+    "list_items": [],
+    "equations": [],
+    "tables": [],
+    "images": [],
+    "subheadings": []
+  },
+  "sections": {
+    "introduction": {
+      "heading": "Introduction",
+      "pages": [
+        1
+      ],
+      "text": "This experiment explores how light waves interfere when they pass through a double slit and compare with a diffraction grating.",
+      "list_items": [
+        "Use the observed fringe spacing to connect the pattern to wavelength and slit spacing.",
+        "Record the wavelength setting used for each trial."
+      ],
+      "equations": [],
+      "tables": [],
+      "images": [],
+      "subheadings": []
+    },
+    "principle": {
+      "heading": "Experiment Principle",
+      "pages": [
+        1,
+        2
+      ],
+      "text": "Constructive and destructive interference produce bright and dark fringes whose spacing depends on geometry and wavelength.",
+      "list_items": [],
+      "equations": [
+        "d sin(theta) = m lambda"
+      ],
+      "tables": [],
+      "images": [
+        {
+          "caption": [
+            "Interference fringe geometry"
+          ],
+          "footnote": [],
+          "img_path": "interference-fringe-geometry.png",
+          "page": 2,
+          "context_subheading": "2.1 Fringe pattern sketch",
+          "section_heading": "Experiment Principle"
+        }
+      ],
+      "subheadings": [
+        {
+          "heading": "2.1 Fringe pattern sketch",
+          "page": 2
+        }
+      ]
+    },
+    "procedure": {
+      "heading": "Experimental Procedure",
+      "pages": [
+        2,
+        3
+      ],
+      "text": "1. Align the laser with the slit assembly.\n2. Place the screen at the marked distance.\n3. Adjust the slit width and capture the fringe pattern.",
+      "list_items": [
+        "Turn on the laser and verify the beam is centered on the slit.",
+        "Move the screen until a clear fringe pattern appears.",
+        "Capture one photo for each configuration."
+      ],
+      "equations": [],
+      "tables": [],
+      "images": [],
+      "subheadings": []
+    },
+    "observations": {
+      "heading": "Required Observations",
+      "pages": [
+        3
+      ],
+      "text": "Observe how the fringe spacing changes when the slit width or screen distance changes.",
+      "list_items": [
+        "Note whether the central maximum is sharp or broadened.",
+        "Record any misalignment or stray-light conditions."
+      ],
+      "equations": [],
+      "tables": [
+        {
+          "caption": [
+            "Fringe spacing record"
+          ],
+          "footnote": [],
+          "body": "configuration | measured fringe spacing | notes",
+          "img_path": "",
+          "page": 3,
+          "context_subheading": null,
+          "section_heading": "Required Observations"
+        }
+      ],
+      "images": [
+        {
+          "caption": [
+            "Observed fringe photograph"
+          ],
+          "footnote": [],
+          "img_path": "fringe-photo.png",
+          "page": 3,
+          "context_subheading": "3.2 Photo check",
+          "section_heading": "Required Observations"
+        }
+      ],
+      "subheadings": [
+        {
+          "heading": "3.1 Observation notes",
+          "page": 3
+        },
+        {
+          "heading": "3.2 Photo check",
+          "page": 3
+        }
+      ]
+    },
+    "analysis_cues": {
+      "heading": "Analysis Cues",
+      "pages": [
+        4
+      ],
+      "text": "Compare the measured fringe spacing with the theoretical prediction and explain any discrepancies.",
+      "list_items": [
+        "Use the table values to estimate the wavelength.",
+        "Discuss whether uncertainty comes mainly from alignment or reading the fringe spacing."
+      ],
+      "equations": [],
+      "tables": [],
+      "images": [],
+      "subheadings": []
+    },
+    "thinking_questions": {
+      "heading": "Thinking Questions",
+      "pages": [
+        4
+      ],
+      "text": "",
+      "list_items": [
+        "Why does the fringe spacing shrink when the screen is moved farther away?",
+        "What would change if the laser wavelength were different?"
+      ],
+      "equations": [],
+      "tables": [],
+      "images": [],
+      "subheadings": []
+    }
+  },
+  "appendix_candidates": {
+    "appendix_sections": [],
+    "image_captions": [
+      "Interference fringe geometry",
+      "Observed fringe photograph"
+    ],
+    "table_captions": [
+      "Fringe spacing record"
+    ]
+  }
+}

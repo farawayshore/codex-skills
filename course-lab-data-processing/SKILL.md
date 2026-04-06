@@ -36,12 +36,17 @@ Do not use this skill to choose the experiment, transcribe raw data, stage figur
 
 - Use local `scripts/compute_uncertainties.py` for direct measured quantities and repeated-measurement summaries.
 - Use local `scripts/propagate_uncertainties.py` for indirect quantities and propagation-rule calculations.
+- Use local `scripts/render_calculation_details.py` when the run needs appendix-ready calculation-detail attachments for later report staging.
 - Keep all data-processing computation paths local to `/root/.codex/skills/course-lab-data-processing/`.
 - Keep a quantity contract that preserves the measured symbol and its canonical safe key together.
 - Default the expanded-uncertainty coverage factor to `k=2` unless the handout or experiment rules explicitly require a different value.
 - Cover every corresponding indirect measured quantity requested in the handout when the validated data are sufficient.
 - If a handout-requested indirect quantity cannot yet be computed from validated data, emit a visible unresolved artifact instead of omitting it quietly.
 - Keep missing resolution information visible. If a resolution is not yet known, do not invent it.
+- When later report assembly needs appendix-ready calculation detail, emit `calculation_details_manifest.json` plus generated `.tex` attachments that present a compact formula-first derivation supplement rather than a raw numeric dump.
+- Prefer symbolic calculation flow, partial-derivative propagation structure, and a visible appendix-style callout block over exhaustive value tables.
+- Treat those generated calculation-detail attachments as appendix material that may use full-width pages, so readable derivation notation such as `\sqrt{...}` is preferred over special compressed formatting that only exists to protect narrow two-column layouts.
+- Allow the calculation-details spec to narrow the appendix with a `focus_derived` list when only key derivations should appear so the appendix stays within a practical page budget.
 
 ## Primary Commands
 
@@ -92,6 +97,30 @@ Example propagation spec shape:
 }
 ```
 
+Appendix-ready calculation-detail attachments for later `course-lab-final-staging` handoff:
+
+```bash
+python3 /root/.codex/skills/course-lab-data-processing/scripts/render_calculation_details.py \
+  --spec "/path/to/results/<experiment>/analysis/calculation_details_spec.json" \
+  --output-dir "/path/to/results/<experiment>/analysis/calculation_details" \
+  --output-manifest "/path/to/results/<experiment>/analysis/calculation_details_manifest.json"
+```
+
+Example compact appendix spec shape:
+
+```json
+{
+  "groups": [
+    {
+      "title": "LX1 String Calculation Details",
+      "slug": "lx1-string-calculation-details",
+      "derived_summaries": ["/path/to/results/<experiment>/analysis/uncertainty/string_processing_summary.json"],
+      "focus_derived": ["rho", "a", "v_mean"]
+    }
+  ]
+}
+```
+
 ## Workflow
 
 1. Read the matching handout before touching the data table.
@@ -102,7 +131,9 @@ Example propagation spec shape:
 6. Build a derived-quantity spec for every handout-requested indirect result that is supported by the validated data.
 7. Use explicit derived formulas whenever a new quantity symbol differs from the measured symbol, such as `r = two_r / 2`.
 8. Run `scripts/propagate_uncertainties.py` on that spec.
-9. Review the direct and derived outputs together, checking for provisional resolution fields, notation mismatches, and handout-requested quantities that are still unresolved.
+9. If the report will need appendix-side calculation detail, run `scripts/render_calculation_details.py` so the derivation chain is preserved outside the main body in a compact appendix style.
+10. When the appendix would otherwise become too long, set `focus_derived` in the spec so only the key formulas and propagation steps are emitted.
+11. Review the direct and derived outputs together, checking for provisional resolution fields, notation mismatches, handout-requested quantities that are still unresolved, and whether the generated appendix attachments emphasize derivation structure instead of raw numeric repetition.
 
 ## Quick Reference
 
@@ -134,6 +165,7 @@ Example propagation spec shape:
 - Treating a measured `2r` row as if it directly measured `r`.
 - Summarizing only direct measurements and forgetting the handout’s indirect requested quantities.
 - Omitting propagation rules for derived quantities that depend on several inputs.
+- Emitting only the final derived number and forgetting the helper quantity chain that later appendix staging needs.
 - Hiding missing resolution information by typing in a guessed number.
 - Turning uncertainty output into polished conclusions before the interpretation step has the rest of the evidence.
 
@@ -141,7 +173,9 @@ Example propagation spec shape:
 
 - `scripts/compute_uncertainties.py`: local direct-quantity uncertainty calculator
 - `scripts/propagate_uncertainties.py`: local derived-quantity and propagation-rule calculator
+- `scripts/render_calculation_details.py`: local appendix-ready calculation-detail renderer for later final-staging handoff
 - `scripts/common.py`: local copied helper module for standalone packaging
 - `tests/test_compute_uncertainties.py`: local regression tests for direct summaries and handout-style labels
 - `tests/test_propagate_uncertainties.py`: local regression tests for derived quantities and propagation
+- `tests/test_render_calculation_details.py`: local regression tests for appendix-ready calculation-detail artifacts
 - `tests/test_skill_package.py`: local standalone packaging tests

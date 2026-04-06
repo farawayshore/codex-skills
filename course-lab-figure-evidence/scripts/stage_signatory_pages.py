@@ -15,10 +15,16 @@ from common import safe_label, write_json
 SIGNATORY_SUFFIXES = {".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp", ".pdf"}
 SIGNATORY_PAGES_PER_ROW = 2
 MAX_SIGNATORY_PAGES_PER_BLOCK = 4
+SIGNATORY_SUBFIGURE_WIDTH = r"0.42\textwidth"
+SIGNATORY_IMAGE_MAX_HEIGHT = r"0.33\textheight"
 
 
 def subfigure_width() -> str:
-    return r"0.48\textwidth"
+    return SIGNATORY_SUBFIGURE_WIDTH
+
+
+def subfigure_image_options() -> str:
+    return rf"width=\linewidth,height={SIGNATORY_IMAGE_MAX_HEIGHT},keepaspectratio"
 
 
 def build_subfigure_caption(path: Path) -> str:
@@ -90,12 +96,12 @@ def write_tex(manifest: dict[str, object], tex_path: Path) -> None:
                     [
                         rf"    \begin{{subfigure}}[t]{{{width}}}",
                         r"        \centering",
-                        rf"        \includegraphics[width=\linewidth]{{signatory-pages/{rel_path}}}",
+                        rf"        \includegraphics[{subfigure_image_options()}]{{signatory-pages/{rel_path}}}",
                     ]
                 )
                 caption_text = str(entry.get("subfigure_caption", "")).strip()
                 if caption_text:
-                    lines.append(rf"        \caption*{{{caption_text}}}")
+                    lines.append(rf"        \caption{{{caption_text}}}")
                 lines.append(r"    \end{subfigure}")
                 is_last = position == len(group_entries) - 1
                 if position % SIGNATORY_PAGES_PER_ROW == 0:

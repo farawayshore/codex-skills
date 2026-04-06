@@ -1,0 +1,4 @@
+interface:
+  display_name: "Course Lab Run Plan"
+  short_description: "Build a planning-only lab run-plan contract"
+  default_prompt: "Use $course-lab-run-plan only after normalized handout artifacts and the target workspace already exist. Use the local copied tools in this folder to build aligned JSON and Markdown run-plan outputs, keep the work planning-only, keep unresolved gaps visible, and do not mutate TeX, perform data transfer, do computation, or write final report prose."

@@ -1,0 +1,20 @@
+{
+  "evidence_units": [
+    {
+      "group_id": "z-cut-teo2",
+      "warnings": [],
+      "anomaly_signals": [],
+      "mapping_confidence": "high"
+    },
+    {
+      "group_id": "mystery-image",
+      "warnings": [
+        "low-confidence grouping"
+      ],
+      "anomaly_signals": [
+        "unexplained contrast"
+      ],
+      "mapping_confidence": "low"
+    }
+  ]
+}

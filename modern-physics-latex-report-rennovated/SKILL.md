@@ -109,7 +109,9 @@ python3 /root/.codex/skills/course-lab-results-interpretation/scripts/build_resu
 
 12. After the retained discussion directions are approved, hand the approved synthesis-input artifacts off to `$course-lab-discussion-synthesis` so it can build artifact-only discussion harmonization outputs for `course-lab-final-staging` without mutating the report directly.
 
-13. Build `Further Discussion` candidates after the evidence plan is stable:
+13. Hand the stabilized scaffold, processed-data, interpretation, discussion-synthesis, optional modeling, and appendix-code artifacts off to `$course-lab-final-staging` so it can assemble the later non-figure report draft before `$course-lab-figure-evidence` and `$course-lab-finalize-qc`.
+
+14. Build `Further Discussion` candidates after the evidence plan is stable:
 
 ```bash
 python3 /root/.codex/skills/modern-physics-latex-report-rennovated/scripts/build_discussion_candidates.py \
@@ -128,15 +130,17 @@ python3 /root/.codex/skills/compress-png/scripts/compress_png.py \
   --top 20
 ```
 
-12. Check final report coverage and cleanup:
+12. Hand final compile, QC, and handoff to the standalone finalize-QC leaf:
 
 ```bash
-python3 /root/.codex/skills/modern-physics-latex-report-rennovated/scripts/report_qc.py \
-  --tex /path/to/main.tex \
+python3 /root/.codex/skills/course-lab-finalize-qc/scripts/finalize_qc.py \
+  --main-tex /path/to/main.tex \
   --procedures /path/to/experiment_procedures.md \
   --evidence-plan "/path/to/results/<experiment>/picture_evidence_plan.json" \
   --discussion-candidates "/path/to/results/<experiment>/discussion_candidates.json" \
-  --output-markdown /tmp/report_qc.md
+  --output-summary-json "/path/to/results/<experiment>/final_qc_summary.json" \
+  --output-summary-markdown "/path/to/results/<experiment>/final_qc_summary.md" \
+  --output-unresolved "/path/to/results/<experiment>/final_qc_unresolved.md"
 ```
 
 ## Workflow
@@ -364,6 +368,7 @@ Follow this execution order during a real run.
 - Push the discussion beyond a short generic paragraph. Add deeper physical interpretation, comparison with theory, comparison with literature expectations, error-source analysis, and specific improvement suggestions when the experiment supports them.
 - After the standard discussion is stable, hand candidate generation off to `$course-lab-discussion-ideas` so stable interpretation artifacts, matched reference reports, permanent idea memory, and targeted outside lookup are reconciled before synthesis continues.
 - After the user approves the retained discussion directions, hand the approved set off to `$course-lab-discussion-synthesis` so the final discussion-layer artifacts are harmonized before `course-lab-final-staging` begins.
+- After scaffold, processed-data, interpretation, and discussion-synthesis artifacts are all stable, hand them off to `$course-lab-final-staging` so the later non-figure report content is assembled before `course-lab-figure-evidence` starts.
 - Add a dedicated `Further Discussion` section after the normal discussion whenever meaningful approved idea artifacts exist.
 - Treat those approved idea artifacts as the starting points for beyond-handout interpretation instead of inventing freeform speculation.
 - Distinguish clearly between observed fact, supported interpretation, and tentative hypothesis.
@@ -381,20 +386,14 @@ Follow this execution order during a real run.
 
 ### 11. Compile, Review, And Hand Off
 
-- Copy or refresh the workspace `build.sh` from `assets/build.sh`.
 - Write or rewrite the abstract only after the body, discussion, appendix, and references are stable.
 - Finalize the abstract before the catalogue is inserted or refreshed.
 - After the full section tree is stable, insert or refresh the catalogue between the keywords block and the Introduction. If the template has no keywords block, place it after the front matter and before the first body section.
 - Use a hyperlinked catalogue so every section and subsection entry jumps to its destination. Add `\usepackage[hidelinks]{hyperref}` if needed.
-- Compile with `bash build.sh`.
-- The final PDF must be no larger than `20 MB`.
-- If the compiled PDF still exceeds `20 MB`, revisit the staged image pool, compress oversized PNG assets with `compress-png`, rebuild, and re-check before handoff.
-- Decode the compiled PDF with `$mineru-pdf-json` when practical so the review pass can inspect the generated document, not only the source.
-- Run `scripts/report_qc.py` against the current `main.tex`, procedures markdown, evidence plan, and discussion candidates.
-- Re-open the TeX if QC finds missing procedure IDs, forbidden phrases, irrelevant leftover text, appendix-only violations, placeholder spillover, table-layout risks, or narrative-tone leakage.
-- Re-open the TeX if QC warns that planned evidence groups never reached the draft, `% evidence:<group_id>` placement markers are incomplete, `Further Discussion` lacks candidate backing, or low-confidence reasoning is written with overly strong certainty.
-- Do one final scan for AI, automation, provenance wording, status-log phrasing, or tool-perspective narration anywhere in the TeX source, including comments and captions, and remove it unless it is a neutral structural marker that the skill explicitly requires.
-- End by showing the PDF and explicitly listing any remaining missing data, missing figures, failed procedures, or unresolved interpretation conflicts.
+- After the abstract and catalogue are stable, hand the finished draft, procedures markdown, evidence plan, and discussion candidates off to `$course-lab-finalize-qc`.
+- Let `$course-lab-finalize-qc` refresh `build.sh`, compile the report, run its copied local QC checker, enforce the hard `20 MB` PDF-size gate, record the compiled PDF page count, and warn when the report falls outside the preferred `20-30` page band.
+- If the compiled PDF still exceeds `20 MB`, let `$course-lab-finalize-qc` surface that failure and hand the image-compression follow-up to `compress-png` before the next rerun.
+- Review the finalize-QC summary and unresolved-gap outputs before handoff.
 
 ## Capability Preservation Map
 
@@ -412,7 +411,7 @@ Use this map to verify that the execution-first rewrite did not drop required fu
 - Parallel-wave orchestration, shared-draft safety, worker prompts, and checkpoint behavior: [parallel_workflow.md](./references/parallel_workflow.md), [shared_draft_contract.md](./references/shared_draft_contract.md), [worker_prompt_template.md](./references/worker_prompt_template.md), [controller_checkpoints.md](./references/controller_checkpoints.md)
 - Data processing and uncertainty calculation: `$course-lab-data-processing`
 - Anomaly checks, result inventory completeness, indirect-result derivation, and further-discussion candidate shaping: `$course-lab-discussion-ideas`, [quality_gate.md](./references/quality_gate.md)
-- Discussion depth, appendix rules, catalogue placement, provenance bans, compile, QC, PDF review, and handoff gaps: [report_structure.md](./references/report_structure.md), [quality_gate.md](./references/quality_gate.md), `scripts/report_qc.py`
+- Discussion depth, appendix rules, catalogue placement, provenance bans, compile/QC handoff, PDF review, and handoff gaps: [report_structure.md](./references/report_structure.md), [quality_gate.md](./references/quality_gate.md), `$course-lab-finalize-qc`
 
 ## Non-Negotiable Rules
 
@@ -439,6 +438,6 @@ Use this map to verify that the execution-first rewrite did not drop required fu
 - Read [report_structure.md](./references/report_structure.md) before deciding the final section layout.
 - Read [quality_gate.md](./references/quality_gate.md) before the compile-and-review loop.
 - Read [parallel_workflow.md](./references/parallel_workflow.md), [shared_draft_contract.md](./references/shared_draft_contract.md), [worker_prompt_template.md](./references/worker_prompt_template.md), and [controller_checkpoints.md](./references/controller_checkpoints.md) before using `Parallel Analysis Mode`.
-- Use `scripts/discover_sources.py`, `scripts/ensure_report_workspace.py`, `scripts/manage_author_profile.py`, `scripts/extract_decoded_sections.py`, `scripts/stage_picture_results.py`, `scripts/plan_picture_evidence.py`, `scripts/stage_signatory_pages.py`, and `scripts/report_qc.py` instead of rewriting their logic inline, and use `$course-lab-experiment-principle` for early theory-facing writing plus handout-derived theory-image insertion plus `$course-lab-discussion-ideas` for standalone discussion-idea generation plus `$course-lab-discussion-synthesis` for artifact-only discussion harmonization before final staging.
+- Use `scripts/discover_sources.py`, `scripts/ensure_report_workspace.py`, `scripts/manage_author_profile.py`, `scripts/extract_decoded_sections.py`, `scripts/stage_picture_results.py`, and `scripts/plan_picture_evidence.py` plus `scripts/stage_signatory_pages.py` instead of rewriting their logic inline, and use `$course-lab-experiment-principle` for early theory-facing writing plus handout-derived theory-image insertion plus `$course-lab-discussion-ideas` for standalone discussion-idea generation plus `$course-lab-discussion-synthesis` for artifact-only discussion harmonization before final staging plus `$course-lab-finalize-qc` for final compile/QC/handoff.
 - Use `$course-lab-data-processing` for standalone data-processing artifacts instead of reaching back into this parent skill for that step.
 - Use the `compress-png` skill when staged PNG assets threaten the final PDF size target.
