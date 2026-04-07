@@ -11,9 +11,10 @@
 ## course-lab-handout-normalization
 - Invoke when: selected handout or reference material must become normalized section artifacts.
 - Required inputs: confirmed handout/reference files or decoded outputs.
+- Emits: persistent decoded handout artifacts at `AI_works/resources/experiment_handout/Modern Physics Experiments/pdf_decoded/<experiment-name>/<experiment-name>.md` and `AI_works/resources/experiment_handout/Modern Physics Experiments/pdf_decoded/<experiment-name>/<experiment-name>.json`.
 - Emits: normalized section JSON and Markdown.
 - Delegation preference: Prefer Small Worker.
-- QC reroute ownership: missing or malformed normalized handout structure.
+- QC reroute ownership: missing persistent decoded handout artifacts or malformed normalized handout structure.
 - Does not own: workspace setup, later prose writing.
 
 ## course-lab-workspace-template
@@ -34,7 +35,7 @@
 
 ## course-lab-run-plan
 - Invoke when: normalized handout artifacts exist and the parent needs routing-ready planning outputs.
-- Required inputs: normalized section JSON and Markdown, initialized workspace.
+- Required inputs: normalized section JSON and Markdown, initialized workspace, and the persistent decoded handout artifacts that justify them.
 - Emits: run-plan JSON and Markdown artifacts.
 - Delegation preference: Prefer Inline / Main Agent.
 - QC reroute ownership: planning omissions that hide required later deliverables.
@@ -52,6 +53,8 @@
 - Invoke when: theory-facing sections must be written from handout-grounded material.
 - Required inputs: normalized handout artifacts, scaffolded workspace.
 - Emits: Introduction, nearby Background, Experiment Principle content and related theory figures.
+- Emits: `principle_ownership.json`, and when theory-image staging is available or attempted, `principle_figures.json` plus `principle_figures.tex`.
+- Emits: `principle_unresolved.md` when handout support, section mapping, or theory-image grouping remains weak.
 - Delegation preference: Prefer Inline / Main Agent.
 - QC reroute ownership: thin or missing theory-facing coverage.
 - Does not own: data processing, discussion synthesis, final QC.
@@ -120,6 +123,7 @@
 - Invoke when: stable scaffold, processing, interpretation, and discussion artifacts must become the late non-figure draft.
 - Required inputs: canonical report workspace, scaffold, processed artifacts, interpretation artifacts, discussion artifacts, confirmed-reference reuse artifacts, optional modeling or appendix inputs.
 - Emits: staged late-draft TeX changes plus staging summaries and unresolved notes.
+- Emits: `final_staging_summary.json`, `final_staging_summary.md`, `final_staging_unresolved.md`, and `appendix_code_manifest.json`.
 - Emits: comparison-case handoff data in the staging summary when same-case observed/simulation assets were normalized for downstream figure pairing.
 - Emits: confirmed literature-reference summaries for downstream confirmed-reference reuse without re-searching.
 - Delegation preference: Explicit Stay-Local.
@@ -132,6 +136,8 @@
 - Invoke when: the staged draft already exists and placement-ready evidence groups must be inserted.
 - Required inputs: stable evidence-plan artifact or equivalent placement-ready grouping manifest, staged draft, explicit group-to-target mapping.
 - Emits: figure placement changes and evidence-linked late draft updates.
+- Emits: `picture_evidence_plan.json` and `picture_evidence_plan.md`.
+- Emits: `signatory_pages_manifest.json` and `signatory_pages.tex` when signatory sources exist, otherwise explicit unresolved late-stage outputs.
 - Emits: same-case observed-versus-simulation figure pairing when comparison-case handoff data exists.
 - Delegation preference: Conditional Stronger Worker.
 - QC reroute ownership: malformed late insertions or figure-placement issues.

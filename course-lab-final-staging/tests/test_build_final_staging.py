@@ -994,7 +994,7 @@ class BuildFinalStagingTests(unittest.TestCase):
             self.assertNotIn("Case 3", tex)
             self.assertNotIn(r"\paragraph{Compact Case Comparison}", tex)
 
-    def test_appendix_data_files_render_in_distinct_block_and_skip_already_cited_csvs(self) -> None:
+    def test_appendix_data_files_render_as_data_records_without_csv_label(self) -> None:
         with tempfile.TemporaryDirectory() as temp_name:
             fixture = self.prepare_fixture(
                 Path(temp_name),
@@ -1012,7 +1012,8 @@ class BuildFinalStagingTests(unittest.TestCase):
             tex = fixture["main_tex"].read_text(encoding="utf-8")
             appendix_block = slice_between(tex, "% course-lab-final-staging:appendix:begin")
             self.assertIn(r"\subsection{Data Files}", appendix_block)
-            self.assertIn(r"\paragraph{uncited\_measurements.csv}", appendix_block)
+            self.assertIn(r"\paragraph{uncited measurements}", appendix_block)
+            self.assertNotIn(r"\paragraph{uncited\_measurements.csv}", appendix_block)
             self.assertIn(r"\begin{tcolorbox}[enhanced,breakable,colback=green!4!white", appendix_block)
             self.assertIn("radius_cm,k_value", appendix_block)
             self.assertIn("1.2,0.91", appendix_block)
@@ -1021,9 +1022,12 @@ class BuildFinalStagingTests(unittest.TestCase):
             manifest = json.loads(fixture["output_appendix_manifest"].read_text(encoding="utf-8"))
             labels = [entry.get("label") for entry in manifest["appendix_entries"]]
             roles = {entry.get("label"): entry.get("role") for entry in manifest["appendix_entries"]}
-            self.assertIn("uncited_measurements.csv", labels)
+            source_paths = {entry.get("label"): entry.get("source_path") for entry in manifest["appendix_entries"]}
+            self.assertIn("uncited measurements", labels)
+            self.assertNotIn("uncited_measurements.csv", labels)
             self.assertNotIn("cited_measurements.csv", labels)
-            self.assertEqual(roles["uncited_measurements.csv"], "data-file")
+            self.assertEqual(roles["uncited measurements"], "data-file")
+            self.assertTrue(str(source_paths["uncited measurements"]).endswith("uncited_measurements.csv"))
 
     def test_aggregate_only_inputs_do_not_invent_fake_comparison_case_blocks(self) -> None:
         with tempfile.TemporaryDirectory() as temp_name:

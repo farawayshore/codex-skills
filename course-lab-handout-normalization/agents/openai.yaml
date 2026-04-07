@@ -1,4 +1,4 @@
 interface:
   display_name: "Course Lab Handout Normalization"
   short_description: "Normalize a selected handout into section artifacts"
-  default_prompt: "Use $course-lab-handout-normalization after discovery has confirmed the experiment and source PDF, prefer PDF-to-Markdown first for readable inspection, escalate to PDF-to-JSON second only when structured section extraction is needed, save any produced JSON or Markdown with experiment-specific filenames, and avoid editing the report workspace or TeX."
+  default_prompt: "Use $course-lab-handout-normalization after discovery has confirmed the experiment and source PDF, require MinerU Markdown-first inspection and MinerU JSON-second extraction, never use pdftotext or other text-only fallback decoders, use vision only as a complementary aid when MinerU output is ambiguous, treat successful handout normalization as persistent decoded handout artifacts under AI_works/resources/experiment_handout/Modern Physics Experiments/pdf_decoded/<experiment-name>/<experiment-name>.md and <experiment-name>.json, must not treat ad hoc extracts as equivalent, and avoid editing the report workspace or TeX."

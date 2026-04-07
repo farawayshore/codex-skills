@@ -52,13 +52,13 @@ Do not use this skill to transfer raw data, recompute uncertainties, execute mod
 - Place `Calculation Details` before `Code` in appendix rendering when both are present.
 - Render that `Calculation Details` appendix as full-width appendix material when needed; it does not need to preserve the two-column body-layout math constraints used elsewhere in the report.
 - Attach major code in the appendix when those files are explicitly provided.
-- Attach uncited CSV data attachments in the appendix when those files are explicitly provided through `--appendix-data`, using a visually distinct data-file block instead of the code-style block.
+- Attach uncited data attachments in the appendix when those files are explicitly provided through `--appendix-data`, using a visually distinct data-record block instead of the code-style block.
 - Require the caller to pass appendix code paths explicitly through `--appendix-code` when discovered simulation or modeling scripts should appear in the report appendix.
-- Require the caller to pass appendix data-file paths explicitly through `--appendix-data` when staged CSV bundles should appear in the report appendix.
+- Require the caller to pass appendix data-file paths explicitly through `--appendix-data` when staged data bundles should appear in the report appendix.
 - Require the caller to pass the calculation-details manifest explicitly through `--calculation-details-manifest`; this skill does not discover calculation-detail attachments by scanning the workspace.
 - Require the caller to pass confirmed references explicitly through `--references-json`; this skill does not discover literature sources from search specs, raw URLs, or workspace scans.
 - Render explicitly provided appendix code as selectable report text when the downstream build path supports it, using compact styled code blocks rather than path-only placeholders.
-- Skip appendix data files that are already cited by filename in the current report draft, so the appendix only catches still-unmentioned staged CSV attachments.
+- Skip appendix data files that are already cited by filename in the current report draft, so the appendix only catches still-unmentioned staged data attachments.
 - Emit:
   - `final_staging_summary.json`
   - `final_staging_summary.md`
@@ -80,8 +80,8 @@ python3 /root/.codex/skills/course-lab-final-staging/scripts/build_final_staging
   --discussion-synthesis-json "/path/to/results/<experiment>/discussion_synthesis.json" \
   --references-json "/path/to/results/<experiment>/analysis/reference_values.json" \
   --modeling-result "/path/to/results/<experiment>/modeling/batch_run_result.json" \
-  --appendix-data "/path/to/results/<experiment>/analysis/appendix_data/case1_measurements.csv" \
-  --appendix-data "/path/to/results/<experiment>/analysis/appendix_data/case2_measurements.csv" \
+  --appendix-data "/path/to/results/<experiment>/analysis/appendix_data/case1_measurements.txt" \
+  --appendix-data "/path/to/results/<experiment>/analysis/appendix_data/case2_measurements.txt" \
   --appendix-code "/path/to/results/<experiment>/modeling/model.wl" \
   --appendix-code "/path/to/results/<experiment>/analysis/process_data.py" \
   --output-summary-json "/path/to/results/<experiment>/final_staging_summary.json" \
@@ -104,7 +104,7 @@ python3 /root/.codex/skills/course-lab-final-staging/scripts/build_final_staging
 10. Insert interpretation bridges, modeling results, and synthesized discussion where the artifact evidence supports them.
 11. If some comparison-case material cannot be mapped safely, keep that gap visible in unresolved outputs instead of silently shortening the report.
 12. Stage explicit calculation details as appendix attachments before data files and code when the caller provides a calculation-details manifest.
-13. Stage appendix data-file references and distinct colored CSV listings when `--appendix-data` files are provided and the current draft does not already cite them by filename.
+13. Stage appendix data-record references and distinct colored data listings when `--appendix-data` files are provided and the current draft does not already cite them by filename.
 14. Stage appendix code references and compact styled code listings when major code files are provided.
 15. Treat calculation details, appendix data files, appendix code, and confirmed references as explicit caller-owned handoffs: this skill does not discover those attachments from workspace scans, discovery manifests, result folders, or late search logic on its own.
 16. Emit staging summaries and unresolved-gap notes.
@@ -122,7 +122,7 @@ python3 /root/.codex/skills/course-lab-final-staging/scripts/build_final_staging
 - This skill does not choose or refresh the TeX compiler; final build-path ownership stays with final QC.
 - This skill does not take over final QC.
 - This skill does not discover calculation details files from discovery artifacts or result directories; callers must pass that manifest explicitly.
-- This skill does not discover appendix data files from discovery artifacts or result directories; callers must pass those CSV paths explicitly.
+- This skill does not discover appendix data files from discovery artifacts or result directories; callers must pass those data-file paths explicitly.
 - This skill does not discover appendix code files from discovery artifacts or result directories; callers must pass those paths explicitly.
 - This skill does not discover literature at late stage; confirmed references must arrive through `--references-json`.
 - This skill should fail clearly instead of overwriting substantive user prose in an owned section unless the block is explicitly draft-like or intentionally handed over with `% course-lab-final-staging:allow-overwrite`.
@@ -140,7 +140,7 @@ python3 /root/.codex/skills/course-lab-final-staging/scripts/build_final_staging
 - Emitting one unbroken propagation expression that overflows the column instead of using multi-line math that can wrap.
 - Leaving modeling outputs detached from the report when modeling artifacts already exist.
 - Hiding calculation details in body prose or hand-maintained special includes after `course-lab-data-processing` already provided appendix-ready attachments.
-- Forgetting that uncited CSV bundles can belong in a separate appendix data-files lane instead of being buried in code or omitted entirely.
+- Forgetting that uncited data bundles can belong in a separate appendix data-record lane instead of being buried in code or omitted entirely.
 - Trimming appendix code support too early even though reproducibility material should remain visible.
 - Reaching back into parent or sibling skill folders instead of using this local package.
 - Drifting into `course-lab-figure-evidence` or final QC responsibilities.

@@ -58,6 +58,7 @@ class CourseLabFinalStagingPackageTests(unittest.TestCase):
         self.assertIn("u_b", text)
         self.assertIn("u_c", text)
         self.assertNotIn("modern-physics-latex-report-rennovated/scripts", text)
+        self.assertNotIn("csv", text.lower())
 
     def test_agent_prompt_requires_late_stage_local_writer_behavior(self) -> None:
         agent_path = SKILL_DIR / "agents" / "openai.yaml"

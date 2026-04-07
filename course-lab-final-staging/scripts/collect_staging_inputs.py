@@ -136,10 +136,11 @@ def normalize_appendix_data_entries(raw_paths: list[str] | None) -> list[dict[st
     entries: list[dict[str, object]] = []
     for raw_path in raw_paths or []:
         path = Path(raw_path)
+        display_label = path.stem.replace("_", " ").replace("-", " ").strip() or path.stem
         entries.append(
             {
                 "source_path": str(path),
-                "label": path.name,
+                "label": display_label,
                 "role": "data-file",
                 "exists": path.exists(),
                 "slug": safe_label(path.stem, default="data-file"),

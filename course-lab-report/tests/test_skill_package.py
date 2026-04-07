@@ -102,6 +102,95 @@ class TestCourseLabReportPackageSkeleton(unittest.TestCase):
             with self.subTest(field=field):
                 self.assertIn(field, matrix_text)
 
+    def test_parent_skill_forbids_manual_shortcuts_past_late_stages(self) -> None:
+        skill_text = (PACKAGE_ROOT / "SKILL.md").read_text(encoding="utf-8")
+        expected_snippets = [
+            "must not hand-write a manual short draft",
+            "must not bypass `course-lab-final-staging`",
+            "must not replace missing appendix staging with a prose-only appendix stub",
+            "`final_staging_summary.json`",
+            "`appendix_code_manifest.json`",
+            "`picture_evidence_plan.json`",
+            "`signatory_pages.tex`",
+        ]
+        for snippet in expected_snippets:
+            with self.subTest(snippet=snippet):
+                self.assertIn(snippet, skill_text)
+
+    def test_orchestration_rules_require_late_stage_artifact_proof(self) -> None:
+        text = (PACKAGE_ROOT / "references" / "orchestration_rules.md").read_text(
+            encoding="utf-8"
+        )
+        expected_snippets = [
+            "`final_staging_summary.json`",
+            "`appendix_code_manifest.json`",
+            "`picture_evidence_plan.json`",
+            "`signatory_pages_manifest.json`",
+            "`signatory_pages.tex`",
+            "must not treat a manually compiled PDF as proof",
+            "must stop instead of claiming completion",
+        ]
+        for snippet in expected_snippets:
+            with self.subTest(snippet=snippet):
+                self.assertIn(snippet, text)
+
+    def test_parent_skill_requires_principle_stage_artifact_proof(self) -> None:
+        skill_text = (PACKAGE_ROOT / "SKILL.md").read_text(encoding="utf-8")
+        expected_snippets = [
+            "must not silently continue past `course-lab-experiment-principle`",
+            "`principle_ownership.json`",
+            "`principle_figures.json`",
+            "`principle_figures.tex`",
+            "`principle_unresolved.md`",
+            "must not treat manually written theory prose as proof that principle-image staging ran",
+        ]
+        for snippet in expected_snippets:
+            with self.subTest(snippet=snippet):
+                self.assertIn(snippet, skill_text)
+
+    def test_orchestration_rules_require_principle_stage_artifact_gate(self) -> None:
+        text = (PACKAGE_ROOT / "references" / "orchestration_rules.md").read_text(
+            encoding="utf-8"
+        )
+        expected_snippets = [
+            "`course-lab-experiment-principle` must emit `principle_ownership.json`",
+            "`principle_figures.json`",
+            "`principle_figures.tex`",
+            "`principle_unresolved.md`",
+            "must stop instead of claiming the theory stage is complete",
+        ]
+        for snippet in expected_snippets:
+            with self.subTest(snippet=snippet):
+                self.assertIn(snippet, text)
+
+    def test_parent_skill_requires_persistent_handout_decode_proof(self) -> None:
+        skill_text = (PACKAGE_ROOT / "SKILL.md").read_text(encoding="utf-8")
+        orchestration_text = (PACKAGE_ROOT / "references" / "orchestration_rules.md").read_text(
+            encoding="utf-8"
+        )
+        recovery_text = (PACKAGE_ROOT / "references" / "recovery_matrix.md").read_text(
+            encoding="utf-8"
+        )
+        matrix_text = (PACKAGE_ROOT / "references" / "leaf_responsibility_matrix.md").read_text(
+            encoding="utf-8"
+        )
+        expected_snippets = [
+            "must not treat summary-only handout artifacts as proof that handout normalization completed",
+            "`AI_works/resources/experiment_handout/Modern Physics Experiments/pdf_decoded/<experiment-name>/<experiment-name>.md`",
+            "`AI_works/resources/experiment_handout/Modern Physics Experiments/pdf_decoded/<experiment-name>/<experiment-name>.json`",
+            "`notes/sections.md`",
+            "`sections.json`",
+            "`handout_extract.md`",
+            "must stop instead of silently continuing",
+            "missing persistent decoded handout artifacts",
+        ]
+        for snippet in expected_snippets:
+            with self.subTest(snippet=snippet):
+                joined = "\n".join(
+                    [skill_text, orchestration_text, recovery_text, matrix_text]
+                )
+                self.assertIn(snippet, joined)
+
 
 if __name__ == "__main__":
     unittest.main()

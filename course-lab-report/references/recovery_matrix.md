@@ -16,6 +16,10 @@ This matrix turns final QC into a routing checkpoint instead of a terminal step.
 
 - Route procedure coverage, placeholder gaps, or scaffold mismatch to `course-lab-body-scaffold`.
 - Revisit `course-lab-run-plan` if the missing section suggests a planning omission.
+- Route missing persistent decoded handout artifacts back to `course-lab-handout-normalization`.
+- Treat `handout_extract.md`, `notes/sections.md`, `sections.json`, or other summary-only handout artifacts as insufficient when the persistent decode proof is missing.
+- Route missing theory-stage artifact proof such as `principle_ownership.json`, `principle_figures.json`, `principle_figures.tex`, or `principle_unresolved.md` back to `course-lab-experiment-principle`.
+- Route missing late-stage artifact proof such as `final_staging_summary.json`, `appendix_code_manifest.json`, `picture_evidence_plan.json`, `signatory_pages_manifest.json`, or `signatory_pages.tex` back to the responsible late-stage leaf instead of accepting a manual shortcut.
 
 ## Content Or Support Failures
 
@@ -57,3 +61,4 @@ Use this precedence order:
 - unresolved gaps stay visible
 - multi-leaf late-stage failures return to the parent for sequential repair planning
 - when recovery safety is unclear, prefer inline repair
+- manual short-draft fallbacks and prose-only appendix stubs are not acceptable recovery paths for missing late-stage artifacts

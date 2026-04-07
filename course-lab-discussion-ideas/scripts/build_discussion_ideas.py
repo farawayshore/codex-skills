@@ -15,6 +15,35 @@ from render_discussion_ideas_markdown import (
 )
 
 
+NOVELTY_KEYWORDS = (
+    "mathematica",
+    "python",
+    "code",
+    "script",
+    "extract",
+    "extraction",
+    "brightness",
+    "intensity",
+    "image",
+    "images",
+    "ccd",
+    "digitize",
+    "digitization",
+    "digitisation",
+    "fit",
+    "fitting",
+    "profile",
+    "profiles",
+    "grayscale",
+    "grey scale",
+    "quantify",
+    "quantification",
+    "radial",
+)
+
+SECOND_PASS_KEYWORDS = ("second-pass", "second pass", "weak", "tentative")
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
     parser.add_argument("--experiment-name", required=True)
@@ -64,24 +93,41 @@ def load_memory_ideas(memory_dir: Path) -> list[dict[str, object]]:
     return [item for item in ideas if isinstance(item, dict)]
 
 
-def confidence_and_posture(category: str, *, second_round: bool) -> tuple[str, str]:
-    if category in {"comparison_to_reference", "interpretation_extension"}:
-        return ("medium", "likely indicates")
-    if category in {"anomaly_explanation", "memory_reuse"}:
+def confidence_and_posture(*, second_round: bool, reuse_status: str) -> tuple[str, str]:
+    if reuse_status == "reused":
         return ("medium", "likely indicates")
     if second_round:
-        return ("low", "may indicate")
-    if category in {"missing_result_family", "open_followup"}:
         return ("low", "may indicate")
     return ("medium", "likely indicates")
 
 
-def should_run_broad_first_pass(memory_exists: bool) -> bool:
-    return not memory_exists
-
-
 def targeted_round_count(*, needs_second_pass: bool) -> int:
     return 2 if needs_second_pass else 1
+
+
+def contains_novelty_signal(text: str) -> bool:
+    lowered = text.lower()
+    return any(keyword in lowered for keyword in NOVELTY_KEYWORDS)
+
+
+def needs_second_pass(text: str) -> bool:
+    lowered = text.lower()
+    return any(keyword in lowered for keyword in SECOND_PASS_KEYWORDS)
+
+
+def infer_title(text: str, *, fallback: str) -> str:
+    lowered = text.lower()
+    if "digit" in lowered or "digitization" in lowered or ("fit" in lowered and "radial" in lowered):
+        return "Interference image digitization and fitting follow-up"
+    if "extract" in lowered or "brightness" in lowered or "quantify" in lowered or "profile" in lowered:
+        return "Interference brightness extraction follow-up"
+    if "mathematica" in lowered:
+        return "Mathematica extra-analysis follow-up"
+    if "python" in lowered:
+        return "Python extra-analysis follow-up"
+    if "image" in lowered or "ccd" in lowered:
+        return "Image-derived evidence extraction follow-up"
+    return fallback
 
 
 def build_candidate(
@@ -94,18 +140,21 @@ def build_candidate(
     broad_first_pass_search_used: bool,
     reuse_status: str = "new",
     memory_analogy_notes: list[str] | None = None,
-    needs_second_pass: bool = False,
+    needs_second_pass_lookup: bool = False,
 ) -> dict[str, object]:
     idea_id = safe_label(title, default="discussion-idea")
-    round_count = targeted_round_count(needs_second_pass=needs_second_pass)
-    confidence, posture = confidence_and_posture(category, second_round=needs_second_pass)
+    round_count = targeted_round_count(needs_second_pass=needs_second_pass_lookup)
+    confidence, posture = confidence_and_posture(second_round=needs_second_pass_lookup, reuse_status=reuse_status)
     lookup_summary = (
         "First targeted lookup stayed weak, so a second targeted lookup kept the idea tentative."
         if round_count == 2
         else "One targeted lookup round sharpened the idea against the current evidence and references."
     )
     if broad_first_pass_search_used:
-        lookup_summary = "Broad first-pass search widened this direction. " + lookup_summary
+        lookup_summary = "Broad first-pass search widened this novelty-qualified direction. " + lookup_summary
+
+    lowered = local_basis_summary.lower()
+    suggests_modeling = "model" in lowered or "fit" in lowered
 
     return {
         "idea_id": idea_id,
@@ -115,9 +164,9 @@ def build_candidate(
         "reference_report_support": reference_titles,
         "memory_analogy_notes": memory_analogy_notes or [],
         "local_basis_summary": local_basis_summary,
-        "beyond_handout": category in {"anomaly_explanation", "open_followup"},
-        "suggests_modeling": category in {"missing_result_family", "open_followup"},
-        "suggests_extraction_or_analysis_code": needs_second_pass,
+        "beyond_handout": True,
+        "suggests_modeling": suggests_modeling,
+        "suggests_extraction_or_analysis_code": True,
         "confidence_level": confidence,
         "wording_posture": posture,
         "broad_web_seeded": broad_first_pass_search_used,
@@ -144,97 +193,47 @@ def dedupe_candidates(candidates: list[dict[str, object]]) -> list[dict[str, obj
     return retained
 
 
+def novelty_seed_from_unresolved(text: str) -> dict[str, object] | None:
+    if not contains_novelty_signal(text):
+        return None
+    return {
+        "title": infer_title(text, fallback=f"Open follow-up: {text.split('.')[0]}"),
+        "category": "extra_analysis_extension",
+        "local_basis_summary": text,
+        "source_evidence": [text],
+        "reuse_status": "new",
+        "needs_second_pass_lookup": needs_second_pass(text),
+        "memory_analogy_notes": [],
+    }
+
+
+def novelty_seed_from_memory(memory_item: dict[str, object]) -> dict[str, object] | None:
+    title = str(memory_item.get("title") or memory_item.get("idea_id") or "Prior idea").strip()
+    summary = str(
+        memory_item.get("outside_lookup_summary") or "Prior experiment memory suggests a reusable novelty direction."
+    ).strip()
+    combined = f"{title} {summary}".strip()
+    if not contains_novelty_signal(combined):
+        return None
+    return {
+        "title": title,
+        "category": "memory_reuse",
+        "local_basis_summary": summary,
+        "source_evidence": [title, summary],
+        "reuse_status": "reused",
+        "needs_second_pass_lookup": needs_second_pass(combined),
+        "memory_analogy_notes": [summary],
+    }
+
+
 def build_candidates(
     interpretation_payload: dict[str, object],
     *,
     reference_titles: list[str],
-    broad_first_pass_search_used: bool,
+    permanent_memory_exists: bool,
     memory_ideas: list[dict[str, object]],
-) -> list[dict[str, object]]:
-    candidates: list[dict[str, object]] = []
-
-    interpretation_items = interpretation_payload.get("interpretation_items")
-    if isinstance(interpretation_items, list):
-        for item in interpretation_items:
-            if not isinstance(item, dict):
-                continue
-            name = str(item.get("name") or "result")
-            summary = str(item.get("summary") or "Interpret the current result carefully.")
-            candidates.append(
-                build_candidate(
-                    title=f"{name.replace('_', ' ').title()} interpretation extension",
-                    category="interpretation_extension",
-                    local_basis_summary=summary,
-                    source_evidence=[name, summary],
-                    reference_titles=reference_titles,
-                    broad_first_pass_search_used=broad_first_pass_search_used,
-                )
-            )
-
-    comparison_records = interpretation_payload.get("comparison_records")
-    if isinstance(comparison_records, list):
-        for item in comparison_records:
-            if not isinstance(item, dict):
-                continue
-            status = str(item.get("status") or "").lower()
-            name = str(item.get("name") or "comparison")
-            lane = str(item.get("lane") or "comparison")
-            if status == "missing":
-                candidates.append(
-                    build_candidate(
-                        title=f"{name.replace('_', ' ').title()} missing-result follow-up",
-                        category="missing_result_family",
-                        local_basis_summary=f"{lane} shows that {name} is still missing from the current evidence set.",
-                        source_evidence=[lane, name, status],
-                        reference_titles=reference_titles,
-                        broad_first_pass_search_used=broad_first_pass_search_used,
-                    )
-                )
-            elif status == "compared":
-                candidates.append(
-                    build_candidate(
-                        title=f"{name.replace('_', ' ').title()} reference comparison",
-                        category="comparison_to_reference",
-                        local_basis_summary=f"{lane} already compares {name} and can be extended into a discussion direction.",
-                        source_evidence=[lane, name, status],
-                        reference_titles=reference_titles,
-                        broad_first_pass_search_used=broad_first_pass_search_used,
-                    )
-                )
-
-    anomalies = interpretation_payload.get("anomalies")
-    if isinstance(anomalies, list):
-        for raw in anomalies:
-            text = str(raw).strip()
-            if not text:
-                continue
-            candidates.append(
-                build_candidate(
-                    title=f"Anomaly follow-up: {text.split('.')[0]}",
-                    category="anomaly_explanation",
-                    local_basis_summary=text,
-                    source_evidence=[text],
-                    reference_titles=reference_titles,
-                    broad_first_pass_search_used=broad_first_pass_search_used,
-                )
-            )
-
-    completeness_checks = interpretation_payload.get("completeness_checks")
-    if isinstance(completeness_checks, list):
-        for raw in completeness_checks:
-            text = str(raw).strip()
-            if not text:
-                continue
-            candidates.append(
-                build_candidate(
-                    title=f"Completeness gap: {text.split('.')[0]}",
-                    category="missing_result_family",
-                    local_basis_summary=text,
-                    source_evidence=[text],
-                    reference_titles=reference_titles,
-                    broad_first_pass_search_used=broad_first_pass_search_used,
-                )
-            )
+) -> tuple[list[dict[str, object]], bool]:
+    seeds: list[dict[str, object]] = []
 
     unresolved = interpretation_payload.get("unresolved")
     if isinstance(unresolved, list):
@@ -242,36 +241,36 @@ def build_candidates(
             text = str(raw).strip()
             if not text:
                 continue
-            needs_second_pass = "second-pass" in text.lower() or "weak" in text.lower()
-            candidates.append(
-                build_candidate(
-                    title=f"Open follow-up: {text.split('.')[0]}",
-                    category="open_followup",
-                    local_basis_summary=text,
-                    source_evidence=[text],
-                    reference_titles=reference_titles,
-                    broad_first_pass_search_used=broad_first_pass_search_used,
-                    needs_second_pass=needs_second_pass,
-                )
-            )
+            seed = novelty_seed_from_unresolved(text)
+            if seed:
+                seeds.append(seed)
 
     for memory_item in memory_ideas:
-        title = str(memory_item.get("title") or memory_item.get("idea_id") or "Prior idea")
-        summary = str(memory_item.get("outside_lookup_summary") or "Prior experiment memory suggests a reusable analogy.")
-        candidates.append(
-            build_candidate(
-                title=title,
-                category="memory_reuse",
-                local_basis_summary=summary,
-                source_evidence=[title],
-                reference_titles=reference_titles,
-                broad_first_pass_search_used=False,
-                reuse_status="reused",
-                memory_analogy_notes=[summary],
-            )
-        )
+        seed = novelty_seed_from_memory(memory_item)
+        if seed:
+            seeds.append(seed)
 
-    return dedupe_candidates(candidates)
+    has_new_novelty_seed = any(seed.get("reuse_status") != "reused" for seed in seeds)
+    broad_first_pass_search_used = has_new_novelty_seed and not permanent_memory_exists
+
+    candidates = [
+        build_candidate(
+            title=str(seed["title"]),
+            category=str(seed["category"]),
+            local_basis_summary=str(seed["local_basis_summary"]),
+            source_evidence=[str(part) for part in seed["source_evidence"]],
+            reference_titles=reference_titles,
+            broad_first_pass_search_used=(
+                broad_first_pass_search_used if str(seed.get("reuse_status")) != "reused" else False
+            ),
+            reuse_status=str(seed["reuse_status"]),
+            memory_analogy_notes=[str(part) for part in seed.get("memory_analogy_notes", [])],
+            needs_second_pass_lookup=bool(seed["needs_second_pass_lookup"]),
+        )
+        for seed in seeds
+    ]
+
+    return dedupe_candidates(candidates), broad_first_pass_search_used
 
 
 def main() -> int:
@@ -289,25 +288,18 @@ def main() -> int:
     memory_root = Path(args.memory_root)
     memory_dir = memory_root / args.experiment_safe_name
     permanent_memory_exists = memory_dir.exists() and any(memory_dir.iterdir())
-    broad_first_pass_search_used = should_run_broad_first_pass(permanent_memory_exists)
 
     interpretation_payload = read_json(results_path)
     if not isinstance(interpretation_payload, dict):
         raise SystemExit(f"Expected JSON object at {results_path}")
 
     memory_ideas = load_memory_ideas(memory_dir)
-    idea_gists_text = read_text_if_exists(idea_gists_path)
-    if idea_gists_text and not memory_ideas:
-        interpretation_payload.setdefault("unresolved", [])
-        if isinstance(interpretation_payload["unresolved"], list):
-            interpretation_payload["unresolved"].append(
-                "Idea gists suggest analogical comparison directions for this experiment."
-            )
+    read_text_if_exists(idea_gists_path)
 
-    candidates = build_candidates(
+    candidates, broad_first_pass_search_used = build_candidates(
         interpretation_payload,
         reference_titles=reference_titles,
-        broad_first_pass_search_used=broad_first_pass_search_used,
+        permanent_memory_exists=permanent_memory_exists,
         memory_ideas=memory_ideas,
     )
 
@@ -315,8 +307,8 @@ def main() -> int:
     raw_unresolved = interpretation_payload.get("unresolved")
     if isinstance(raw_unresolved, list):
         unresolved_lines.extend(str(item) for item in raw_unresolved if str(item).strip())
-    if len(candidates) < 5:
-        unresolved_lines.append("Fewer than 5 viable discussion ideas were available from the current evidence.")
+    if not candidates:
+        unresolved_lines.append("No non-routine discussion ideas were available from the current evidence.")
 
     payload = {
         "experiment_name": args.experiment_name,

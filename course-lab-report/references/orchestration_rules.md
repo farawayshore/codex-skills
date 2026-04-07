@@ -30,11 +30,21 @@ Keep it focused on routing and prerequisites rather than leaf internals.
 
 - `course-lab-discovery` must surface a confirmed experiment target plus selected or user-confirmed handout, reference-report, template, and result-folder state before normalization or workspace setup can proceed.
 - `course-lab-handout-normalization` must complete before `course-lab-run-plan`, `course-lab-body-scaffold`, and `course-lab-experiment-principle`.
+- `course-lab-handout-normalization` must leave persistent decoded handout artifacts at `AI_works/resources/experiment_handout/Modern Physics Experiments/pdf_decoded/<experiment-name>/<experiment-name>.md` and `AI_works/resources/experiment_handout/Modern Physics Experiments/pdf_decoded/<experiment-name>/<experiment-name>.json`.
+- The parent must not treat summary-only handout artifacts as proof that handout normalization completed.
+- `handout_extract.md`, `notes/sections.md`, and `sections.json` are useful downstream summaries, but they do not replace the persistent decoded handout artifacts above.
+- `course-lab-experiment-principle` must emit `principle_ownership.json` before downstream stages may treat the theory-facing section ownership as settled.
+- When handout-derived theory-image staging is available or attempted, `course-lab-experiment-principle` must emit `principle_figures.json` and `principle_figures.tex`.
+- When theory-image staging is weak, absent, or ambiguous, `course-lab-experiment-principle` must emit `principle_unresolved.md`.
 - `course-lab-workspace-template` and `course-lab-metadata-frontmatter` must establish the canonical workspace before later draft-mutating stages.
 - `course-lab-data-transfer` must pause for user confirmation before `course-lab-data-processing` or `course-lab-uncertainty-analysis`.
 - `course-lab-data-processing` must stabilize processed artifacts before `course-lab-uncertainty-analysis`, `course-lab-plotting`, and `course-lab-results-interpretation`.
 - `course-lab-results-interpretation` must stabilize interpretation artifacts before `course-lab-discussion-ideas`, `course-lab-discussion-synthesis`, and `course-lab-final-staging`.
 - `course-lab-final-staging` must finish before `course-lab-figure-evidence` and `course-lab-finalize-qc`.
+- `course-lab-final-staging` must emit `final_staging_summary.json`, `final_staging_summary.md`, `final_staging_unresolved.md`, and `appendix_code_manifest.json` before the parent may treat late-stage non-figure assembly as complete.
+- `course-lab-figure-evidence` must emit `picture_evidence_plan.json` and `picture_evidence_plan.md` before the parent may hand the run to `course-lab-finalize-qc`.
+- When signatory sources exist, `course-lab-figure-evidence` must also emit `signatory_pages_manifest.json` and `signatory_pages.tex`.
+- When signatory sources do not exist, `course-lab-figure-evidence` must leave an explicit unresolved late-stage artifact instead of relying on manual appendix prose.
 
 ## Run-Plan-Centered Routing
 
@@ -55,8 +65,17 @@ After the early setup stages, run-plan artifacts become the main routing aid.
 - Stop when discovery does not yield a confirmed experiment target.
 - Stop when canonical workspace information is still ambiguous.
 - Stop when required upstream artifacts are missing.
+- Stop when persistent decoded handout artifacts are missing.
+- The parent must stop instead of silently continuing when only `handout_extract.md`, `notes/sections.md`, `sections.json`, or other summary-only handout artifacts are present.
 - Stop when a later stage depends on user confirmation that has not yet happened.
 - Stop when proposal confirmation state is still `pending_user` for any item that would change comparison scope.
+- Stop when `course-lab-experiment-principle` has not emitted `principle_ownership.json`.
+- Stop when `principle_figures.json` or `principle_figures.tex` is expected but missing.
+- Stop when theory-image staging is unresolved and `principle_unresolved.md` is missing.
+- The parent must stop instead of claiming the theory stage is complete until the principle-stage artifact gate is satisfied.
+- Stop when `final_staging_summary.json`, `appendix_code_manifest.json`, or `picture_evidence_plan.json` is missing at the point where the parent would otherwise claim report completion.
+- Stop when signatory sources exist but `signatory_pages_manifest.json` or `signatory_pages.tex` is missing.
+- The parent must not treat a manually compiled PDF as proof that the late stages ran; it must stop instead of claiming completion until the artifact gate is satisfied.
 
 ## Controller State Contract
 
@@ -90,3 +109,4 @@ When `agent_proposed_key_results` exist, the parent owns the pause / confirm / r
 - preserve unresolved gaps instead of masking them.
 - Multi-leaf late-stage failures should return to the parent for sequential repair planning.
 - When delegation safety is unclear after a failure, prefer inline recovery.
+- The parent must not bypass late-stage ownership by hand-writing a manual short draft or by replacing missing appendix staging with a prose-only appendix stub.
