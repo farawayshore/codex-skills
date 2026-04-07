@@ -475,6 +475,7 @@ def collect_staging_inputs(args: Any) -> dict[str, object]:
     processed_data_path = Path(args.processed_data_json)
     results_interpretation_path = Path(args.results_interpretation_json)
     discussion_synthesis_path = Path(args.discussion_synthesis_json)
+    references_json_path = Path(args.references_json) if getattr(args, "references_json", None) else None
 
     require_existing(main_tex_path, label="main-tex")
     require_existing(body_scaffold_path, label="body-scaffold")
@@ -492,6 +493,8 @@ def collect_staging_inputs(args: Any) -> dict[str, object]:
         raise SystemExit(f"plots-manifest input must exist when provided: {plots_manifest_path}")
     if modeling_result_path is not None and not modeling_result_path.exists():
         raise SystemExit(f"modeling-result input must exist when provided: {modeling_result_path}")
+    if references_json_path is not None and not references_json_path.exists():
+        raise SystemExit(f"references-json input must exist when provided: {references_json_path}")
     if calculation_details_manifest_path is not None and not calculation_details_manifest_path.exists():
         raise SystemExit(
             "calculation-details-manifest input must exist when provided: "
@@ -510,6 +513,10 @@ def collect_staging_inputs(args: Any) -> dict[str, object]:
     if not isinstance(discussion_payload, dict):
         raise SystemExit(f"Expected JSON object at {discussion_synthesis_path}")
 
+    references_payload = maybe_read_json(references_json_path)
+    if references_json_path is not None and references_payload is not None and not isinstance(references_payload, dict):
+        raise SystemExit(f"Expected JSON object at {references_json_path}")
+
     appendix_entries = normalize_appendix_entries(list(args.appendix_code or []))
     appendix_data_entries = normalize_appendix_data_entries(list(getattr(args, "appendix_data", []) or []))
     calculation_detail_entries = normalize_calculation_detail_entries(calculation_details_manifest_path)
@@ -526,6 +533,15 @@ def collect_staging_inputs(args: Any) -> dict[str, object]:
     else:
         normalized_comparison_cases, comparison_case_unresolved = collect_fallback_comparison_cases(workspace_root)
 
+    raw_references = []
+    if isinstance(references_payload, dict):
+        raw_references = list(references_payload.get("references") or [])
+    literature_references = [
+        dict(entry)
+        for entry in raw_references
+        if isinstance(entry, dict) and str(entry.get("comparison_basis") or "").strip() == "literature_report"
+    ]
+
     return {
         "main_tex_path": main_tex_path,
         "main_tex_text": read_text(main_tex_path),
@@ -537,6 +553,8 @@ def collect_staging_inputs(args: Any) -> dict[str, object]:
         "discussion_synthesis": discussion_payload,
         "plots_manifest": maybe_read_json(plots_manifest_path),
         "modeling_payload": maybe_read_json(modeling_result_path),
+        "references_payload": references_payload if isinstance(references_payload, dict) else {},
+        "literature_references": literature_references,
         "processed_data_markdown": read_text_if_exists(Path(args.processed_data_markdown)) if getattr(args, "processed_data_markdown", None) else "",
         "results_interpretation_markdown": read_text_if_exists(Path(args.results_interpretation_markdown)) if getattr(args, "results_interpretation_markdown", None) else "",
         "discussion_synthesis_markdown": read_text_if_exists(Path(args.discussion_synthesis_markdown)) if getattr(args, "discussion_synthesis_markdown", None) else "",

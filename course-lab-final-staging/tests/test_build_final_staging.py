@@ -63,6 +63,7 @@ class BuildFinalStagingTests(unittest.TestCase):
         discussion_synthesis_json = root / "discussion_synthesis.json"
         plots_manifest = root / "plots" / "plot_manifest.json"
         modeling_result = root / "modeling" / "batch_run_result.json"
+        references_json = root / "analysis" / "reference_values.json"
         output_summary_json = root / "final_staging_summary.json"
         output_summary_markdown = root / "final_staging_summary.md"
         output_unresolved = root / "final_staging_unresolved.md"
@@ -200,6 +201,33 @@ class BuildFinalStagingTests(unittest.TestCase):
                         },
                     }
                 },
+            },
+        )
+
+        write_json(
+            references_json,
+            {
+                "references": [
+                    {
+                        "name": "wave_speed",
+                        "label": "Published standing-wave reference",
+                        "value": 20.1,
+                        "unit": "m/s",
+                        "comparison_basis": "literature_report",
+                        "lane": "literature_report_vs_data",
+                        "source": "https://arxiv.org/abs/2401.01234",
+                        "source_title": "arXiv standing-wave comparison study",
+                        "summary": "The published standing-wave study reports a wave-speed benchmark close to the measured case.",
+                    },
+                    {
+                        "name": "wave_speed",
+                        "label": "Handout wave-speed example",
+                        "value": 19.8,
+                        "unit": "m/s",
+                        "comparison_basis": "handout_standard",
+                        "source": "notes/sections.md:42",
+                    },
+                ]
             },
         )
 
@@ -379,6 +407,7 @@ class BuildFinalStagingTests(unittest.TestCase):
             "discussion_synthesis_json": discussion_synthesis_json,
             "plots_manifest": plots_manifest,
             "modeling_result": modeling_result,
+            "references_json": references_json,
             "output_summary_json": output_summary_json,
             "output_summary_markdown": output_summary_markdown,
             "output_unresolved": output_unresolved,
@@ -532,6 +561,7 @@ class BuildFinalStagingTests(unittest.TestCase):
         include_appendix_data: bool = False,
         include_calculation_details: bool = False,
         skip_main_tex_mutation: bool = False,
+        extra_args: list[str] | None = None,
     ) -> list[str]:
         command = [
             sys.executable,
@@ -594,6 +624,9 @@ class BuildFinalStagingTests(unittest.TestCase):
         if skip_main_tex_mutation:
             command.append("--skip-main-tex-mutation")
 
+        if extra_args:
+            command.extend(extra_args)
+
         return command
 
     def run_builder(
@@ -605,6 +638,7 @@ class BuildFinalStagingTests(unittest.TestCase):
         include_appendix_data: bool = False,
         include_calculation_details: bool = False,
         skip_main_tex_mutation: bool = False,
+        extra_args: list[str] | None = None,
     ) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
             self.build_command(
@@ -614,6 +648,7 @@ class BuildFinalStagingTests(unittest.TestCase):
                 include_appendix_data=include_appendix_data,
                 include_calculation_details=include_calculation_details,
                 skip_main_tex_mutation=skip_main_tex_mutation,
+                extra_args=extra_args,
             ),
             capture_output=True,
             text=True,
@@ -1520,6 +1555,29 @@ class BuildFinalStagingTests(unittest.TestCase):
             self.assertEqual(completed.returncode, 0, msg=f"{completed.stdout}\n{completed.stderr}")
             unresolved = fixture["output_unresolved"].read_text(encoding="utf-8")
             self.assertIn("Missing calculation-details file", unresolved)
+
+    def test_confirmed_references_json_renders_literature_context_without_new_search(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_name:
+            fixture = self.prepare_fixture(Path(temp_name))
+
+            completed = self.run_builder(
+                fixture,
+                extra_args=[
+                    "--references-json",
+                    str(fixture["references_json"]),
+                ],
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            tex = fixture["main_tex"].read_text(encoding="utf-8")
+            self.assertIn("arXiv", tex)
+            self.assertIn("Published standing-wave reference", tex)
+            self.assertNotIn("search for literature", tex.lower())
+
+            summary_payload = json.loads(fixture["output_summary_json"].read_text(encoding="utf-8"))
+            literature_references = summary_payload["literature_references"]
+            self.assertEqual(len(literature_references), 1)
+            self.assertEqual(literature_references[0]["comparison_basis"], "literature_report")
 
     def test_ambiguous_synonym_headings_fail_with_candidate_lines(self) -> None:
         with tempfile.TemporaryDirectory() as temp_name:

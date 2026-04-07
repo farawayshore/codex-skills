@@ -10,8 +10,10 @@ from pathlib import Path
 
 SKILL_DIR = Path(__file__).resolve().parents[1]
 SCRIPT_DIR = SKILL_DIR / "scripts"
-if str(SCRIPT_DIR) not in sys.path:
-    sys.path.insert(0, str(SCRIPT_DIR))
+if str(SCRIPT_DIR) in sys.path:
+    sys.path.remove(str(SCRIPT_DIR))
+sys.path.insert(0, str(SCRIPT_DIR))
+sys.modules.pop("common", None)
 
 from compute_uncertainties import canonical_symbol_key, load_rows, parse_quantity_label, summarize_column
 

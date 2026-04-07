@@ -95,6 +95,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--search-spec-json")
     parser.add_argument("--search-snapshot-json")
     parser.add_argument("--page-snapshot-json")
+    parser.add_argument("--approved-literature-json")
     parser.add_argument("--output-json", required=True)
     parser.add_argument("--output-unresolved", required=True)
     parser.add_argument("--max-search-results", type=int, default=5)
@@ -229,12 +230,15 @@ def stage_internet_reference(
     if not query:
         return None
 
-    results = get_search_results(
-        query=query,
-        search_snapshot_payload=search_snapshot_payload,
-        max_results=max_results,
-        timeout=timeout,
-    )
+    try:
+        results = get_search_results(
+            query=query,
+            search_snapshot_payload=search_snapshot_payload,
+            max_results=max_results,
+            timeout=timeout,
+        )
+    except requests.RequestException:
+        return None
     for result in results:
         title = str(result.get("title") or "")
         snippet = str(result.get("snippet") or "")
@@ -282,6 +286,51 @@ def unique_references(entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return unique
 
 
+def merge_approved_literature_entries(
+    references: list[dict[str, Any]],
+    approved_payload: dict[str, Any] | None,
+) -> list[dict[str, Any]]:
+    if not isinstance(approved_payload, dict):
+        return references
+
+    approved_results = approved_payload.get("approved_results", [])
+    if not isinstance(approved_results, list):
+        return references
+
+    merged = list(references)
+    for entry in approved_results:
+        if not isinstance(entry, dict):
+            continue
+        if str(entry.get("comparison_basis") or "").strip() != "literature_report":
+            continue
+        if str(entry.get("confirmation_state") or "approved").strip() != "approved":
+            continue
+        if not str(entry.get("name") or "").strip():
+            continue
+
+        promoted = {
+            "name": entry["name"],
+            "comparison_basis": "literature_report",
+            "lane": "literature_report_vs_data",
+            "source": entry.get("source"),
+        }
+        for key in [
+            "title",
+            "authors",
+            "year",
+            "match_reason",
+            "value",
+            "unit",
+            "qualitative_finding",
+            "label",
+        ]:
+            if key in entry:
+                promoted[key] = entry[key]
+        merged.append(promoted)
+
+    return merged
+
+
 def main() -> int:
     args = parse_args()
 
@@ -299,6 +348,7 @@ def main() -> int:
     search_spec_payload = load_payload(args.search_spec_json)
     search_snapshot_payload = load_payload(args.search_snapshot_json)
     page_snapshot_payload = load_payload(args.page_snapshot_json)
+    approved_literature_payload = load_payload(args.approved_literature_json)
 
     comparison_requirements = merge_requirements(seed_payload, search_spec_payload)
     references: list[dict[str, Any]] = []
@@ -326,6 +376,7 @@ def main() -> int:
         elif str(spec.get("comparison_basis") or "internet_reference") in comparison_requirements["required_bases"]:
             unresolved.append(f"Missing required internet reference comparison for {name}")
 
+    references = merge_approved_literature_entries(references, approved_literature_payload)
     references = unique_references(references)
 
     bases_by_name: dict[str, set[str]] = {}

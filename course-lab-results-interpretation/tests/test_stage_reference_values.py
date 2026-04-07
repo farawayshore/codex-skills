@@ -6,10 +6,20 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
+
+import requests
 
 
 SKILL_DIR = Path(__file__).resolve().parents[1]
+SCRIPT_DIR = SKILL_DIR / "scripts"
 SCRIPT_PATH = SKILL_DIR / "scripts" / "stage_reference_values.py"
+if str(SCRIPT_DIR) in sys.path:
+    sys.path.remove(str(SCRIPT_DIR))
+sys.path.insert(0, str(SCRIPT_DIR))
+sys.modules.pop("common", None)
+
+from stage_reference_values import stage_internet_reference
 
 
 def run_cli(*args: str) -> subprocess.CompletedProcess[str]:
@@ -282,6 +292,193 @@ class StageReferenceValuesTests(unittest.TestCase):
             unresolved_text = output_unresolved.read_text(encoding="utf-8").lower()
             self.assertIn("internet reference", unresolved_text)
             self.assertIn("characteristic_frequency", unresolved_text)
+
+    def test_cli_promotes_approved_literature_entries_into_reference_values(self) -> None:
+        self.assertTrue(SCRIPT_PATH.exists(), f"missing script: {SCRIPT_PATH}")
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            handout_sections_markdown = tmp / "sections.md"
+            processed_data_json = tmp / "processed_data.json"
+            approved_literature_json = tmp / "approved_literature.json"
+            search_snapshot_json = tmp / "search_snapshot.json"
+            output_json = tmp / "reference_values.json"
+            output_unresolved = tmp / "reference_values_unresolved.md"
+
+            write_handout_markdown(handout_sections_markdown)
+            processed_data_json.write_text(
+                json.dumps(
+                    {
+                        "results": [
+                            {
+                                "name": "wave_speed",
+                                "label": "wave speed",
+                                "value": 12.5,
+                                "unit": "m/s",
+                            }
+                        ]
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+            approved_literature_json.write_text(
+                json.dumps(
+                    {
+                        "approved_results": [
+                            {
+                                "name": "wave_speed",
+                                "comparison_basis": "literature_report",
+                                "lane": "literature_report_vs_data",
+                                "title": "Standing waves in circular plates",
+                                "authors": ["A. Author", "B. Author"],
+                                "year": 2024,
+                                "source": "https://arxiv.org/abs/2401.12345",
+                                "qualitative_finding": "Mode-shape topology matches the observed split ring.",
+                                "match_reason": "Same boundary condition and mode family.",
+                                "confirmation_state": "approved",
+                            }
+                        ]
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+            search_snapshot_json.write_text(
+                json.dumps(
+                    {"queries": {"wave speed m/s reference value physics": []}},
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+
+            completed = run_cli(
+                "--handout-sections-markdown",
+                str(handout_sections_markdown),
+                "--processed-data-json",
+                str(processed_data_json),
+                "--approved-literature-json",
+                str(approved_literature_json),
+                "--search-snapshot-json",
+                str(search_snapshot_json),
+                "--output-json",
+                str(output_json),
+                "--output-unresolved",
+                str(output_unresolved),
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            payload = json.loads(output_json.read_text(encoding="utf-8"))
+            literature_entry = next(
+                entry for entry in payload["references"] if entry["comparison_basis"] == "literature_report"
+            )
+            self.assertEqual(literature_entry["lane"], "literature_report_vs_data")
+            self.assertEqual(literature_entry["title"], "Standing waves in circular plates")
+            self.assertEqual(literature_entry["authors"], ["A. Author", "B. Author"])
+
+    def test_cli_does_not_promote_pending_candidate_literature_entries(self) -> None:
+        self.assertTrue(SCRIPT_PATH.exists(), f"missing script: {SCRIPT_PATH}")
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            handout_sections_markdown = tmp / "sections.md"
+            processed_data_json = tmp / "processed_data.json"
+            approved_literature_json = tmp / "approved_literature.json"
+            search_snapshot_json = tmp / "search_snapshot.json"
+            output_json = tmp / "reference_values.json"
+            output_unresolved = tmp / "reference_values_unresolved.md"
+
+            write_handout_markdown(handout_sections_markdown)
+            processed_data_json.write_text(
+                json.dumps(
+                    {
+                        "results": [
+                            {
+                                "name": "wave_speed",
+                                "label": "wave speed",
+                                "value": 12.5,
+                                "unit": "m/s",
+                            }
+                        ]
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+            approved_literature_json.write_text(
+                json.dumps(
+                    {
+                        "approved_results": [
+                            {
+                                "name": "wave_speed",
+                                "comparison_basis": "literature_report",
+                                "lane": "literature_report_vs_data",
+                                "source": "https://example.org/approved",
+                                "title": "Approved source",
+                                "confirmation_state": "approved",
+                            },
+                            {
+                                "name": "wave_speed",
+                                "comparison_basis": "literature_report",
+                                "lane": "literature_report_vs_data",
+                                "source": "https://example.org/pending",
+                                "title": "candidate source should stay provisional",
+                                "confirmation_state": "pending_user",
+                            },
+                        ]
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+            search_snapshot_json.write_text(
+                json.dumps(
+                    {"queries": {"wave speed m/s reference value physics": []}},
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+
+            completed = run_cli(
+                "--handout-sections-markdown",
+                str(handout_sections_markdown),
+                "--processed-data-json",
+                str(processed_data_json),
+                "--approved-literature-json",
+                str(approved_literature_json),
+                "--search-snapshot-json",
+                str(search_snapshot_json),
+                "--output-json",
+                str(output_json),
+                "--output-unresolved",
+                str(output_unresolved),
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            output_text = output_json.read_text(encoding="utf-8")
+            self.assertIn("Approved source", output_text)
+            self.assertNotIn("candidate source should stay provisional", output_text)
+
+    def test_search_transport_failure_leaves_reference_unstaged(self) -> None:
+        with mock.patch(
+            "stage_reference_values.live_search",
+            side_effect=requests.RequestException("offline"),
+        ):
+            staged = stage_internet_reference(
+                spec={"name": "wave_speed", "query": "wave speed reference", "unit": "m/s"},
+                search_snapshot_payload=None,
+                page_snapshot_payload=None,
+                max_results=3,
+                timeout=0.1,
+            )
+
+        self.assertIsNone(staged)
 
 
 if __name__ == "__main__":

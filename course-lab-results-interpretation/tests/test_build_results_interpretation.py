@@ -760,6 +760,291 @@ class CourseLabResultsInterpretationTests(unittest.TestCase):
             self.assertEqual(completed.returncode, 0, completed.stderr)
             self.assertEqual(main_tex.read_text(encoding="utf-8"), original_tex)
 
+    def test_cli_uses_confirmed_comparison_obligations_from_run_plan_json(self) -> None:
+        self.assertTrue(SCRIPT_PATH.exists(), f"missing script: {SCRIPT_PATH}")
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            handout_sections_markdown = tmp / "sections.md"
+            processed_data_json = tmp / "processed_data.json"
+            references_json = tmp / "reference_values.json"
+            run_plan_json = tmp / "run_plan.json"
+            output_json = tmp / "results_interpretation.json"
+            output_markdown = tmp / "results_interpretation.md"
+            output_unresolved = tmp / "results_interpretation_unresolved.md"
+
+            write_handout_markdown(handout_sections_markdown)
+            processed_data_json.write_text(
+                json.dumps(
+                    {
+                        "results": [
+                            {
+                                "name": "wave_speed",
+                                "label": "wave speed",
+                                "value": 12.5,
+                                "unit": "m/s",
+                            }
+                        ]
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+            references_json.write_text(
+                json.dumps(
+                    {
+                        "references": [
+                            {
+                                "name": "wave_speed",
+                                "label": "Handout standing-wave reference",
+                                "value": 12.0,
+                                "unit": "m/s",
+                                "comparison_basis": "handout_standard",
+                                "source": "notes/sections.md:24",
+                            }
+                        ]
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+            run_plan_json.write_text(
+                json.dumps(
+                    {
+                        "comparison_obligations": [
+                            {
+                                "name": "wave_speed",
+                                "label": "wave speed",
+                                "result_kind": "quantitative",
+                                "importance_origin": "handout_required",
+                                "confirmation_state": "confirmed",
+                                "required_lanes": ["theory_vs_data"],
+                                "optional_lanes": ["simulation_vs_data", "literature_report_vs_data"],
+                                "supporting_bases": ["handout_standard"],
+                            }
+                        ]
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+
+            completed = run_cli(
+                "--handout-sections-markdown",
+                str(handout_sections_markdown),
+                "--processed-data-json",
+                str(processed_data_json),
+                "--references-json",
+                str(references_json),
+                "--run-plan-json",
+                str(run_plan_json),
+                "--output-json",
+                str(output_json),
+                "--output-markdown",
+                str(output_markdown),
+                "--output-unresolved",
+                str(output_unresolved),
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            payload = json.loads(output_json.read_text(encoding="utf-8"))
+            lanes = {entry["lane"] for entry in payload["comparison_records"]}
+            self.assertIn("theory_vs_data", lanes)
+            self.assertIn("handout_standard_vs_data", lanes)
+            self.assertEqual(payload["agent_proposed_key_results"], [])
+
+    def test_cli_emits_agent_proposed_key_results_without_silently_promoting_them(self) -> None:
+        self.assertTrue(SCRIPT_PATH.exists(), f"missing script: {SCRIPT_PATH}")
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            handout_sections_markdown = tmp / "sections.md"
+            processed_data_json = tmp / "processed_data.json"
+            references_json = tmp / "reference_values.json"
+            run_plan_json = tmp / "run_plan.json"
+            output_json = tmp / "results_interpretation.json"
+            output_markdown = tmp / "results_interpretation.md"
+            output_unresolved = tmp / "results_interpretation_unresolved.md"
+
+            write_handout_markdown(handout_sections_markdown)
+            processed_data_json.write_text(
+                json.dumps(
+                    {
+                        "results": [
+                            {
+                                "name": "wave_speed",
+                                "label": "wave speed",
+                                "value": 12.5,
+                                "unit": "m/s",
+                            },
+                            {
+                                "name": "mode_shape_case_4",
+                                "label": "Case 4 mode shape",
+                                "value": "split ring with nodal bridge",
+                                "kind": "qualitative",
+                                "sources": ["processed-data", "modeled"],
+                            },
+                        ]
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+            references_json.write_text(
+                json.dumps(
+                    {
+                        "references": [
+                            {
+                                "name": "wave_speed",
+                                "label": "Theory wave speed",
+                                "value": 12.0,
+                                "unit": "m/s",
+                                "comparison_basis": "theory_reference",
+                                "source": "analysis/theory_checks.json:wave_speed",
+                            },
+                            {
+                                "name": "mode_shape_case_4",
+                                "label": "Standing waves in circular plates",
+                                "comparison_basis": "literature_report",
+                                "lane": "literature_report_vs_data",
+                                "source": "https://arxiv.org/abs/2401.12345",
+                                "qualitative_finding": "Mode-shape topology matches the observed split ring.",
+                                "match_reason": "Same boundary condition and mode family.",
+                            },
+                        ]
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+            run_plan_json.write_text(
+                json.dumps(
+                    {
+                        "comparison_obligations": [
+                            {
+                                "name": "wave_speed",
+                                "label": "wave speed",
+                                "result_kind": "quantitative",
+                                "importance_origin": "handout_required",
+                                "confirmation_state": "confirmed",
+                                "required_lanes": ["theory_vs_data"],
+                                "optional_lanes": [],
+                                "supporting_bases": [],
+                            }
+                        ]
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+
+            completed = run_cli(
+                "--handout-sections-markdown",
+                str(handout_sections_markdown),
+                "--processed-data-json",
+                str(processed_data_json),
+                "--references-json",
+                str(references_json),
+                "--run-plan-json",
+                str(run_plan_json),
+                "--output-json",
+                str(output_json),
+                "--output-markdown",
+                str(output_markdown),
+                "--output-unresolved",
+                str(output_unresolved),
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            payload = json.loads(output_json.read_text(encoding="utf-8"))
+            proposals = payload["agent_proposed_key_results"]
+            self.assertEqual(proposals[0]["name"], "mode_shape_case_4")
+            self.assertEqual(proposals[0]["confirmation_state"], "pending_user")
+            compared_names = {entry["name"] for entry in payload["comparison_records"]}
+            self.assertNotIn("mode_shape_case_4", compared_names)
+            candidate = payload["candidate_literature_sources"][0]
+            self.assertEqual(candidate["name"], "mode_shape_case_4")
+
+    def test_cli_records_missing_required_primary_lane_in_unresolved(self) -> None:
+        self.assertTrue(SCRIPT_PATH.exists(), f"missing script: {SCRIPT_PATH}")
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            handout_sections_markdown = tmp / "sections.md"
+            processed_data_json = tmp / "processed_data.json"
+            run_plan_json = tmp / "run_plan.json"
+            output_json = tmp / "results_interpretation.json"
+            output_markdown = tmp / "results_interpretation.md"
+            output_unresolved = tmp / "results_interpretation_unresolved.md"
+
+            write_handout_markdown(handout_sections_markdown)
+            processed_data_json.write_text(
+                json.dumps(
+                    {
+                        "results": [
+                            {
+                                "name": "wave_speed",
+                                "label": "wave speed",
+                                "value": 12.5,
+                                "unit": "m/s",
+                            }
+                        ]
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+            run_plan_json.write_text(
+                json.dumps(
+                    {
+                        "comparison_obligations": [
+                            {
+                                "name": "wave_speed",
+                                "label": "wave speed",
+                                "result_kind": "quantitative",
+                                "importance_origin": "handout_required",
+                                "confirmation_state": "confirmed",
+                                "required_lanes": ["simulation_vs_data"],
+                                "optional_lanes": [],
+                                "supporting_bases": [],
+                            }
+                        ]
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+
+            completed = run_cli(
+                "--handout-sections-markdown",
+                str(handout_sections_markdown),
+                "--processed-data-json",
+                str(processed_data_json),
+                "--run-plan-json",
+                str(run_plan_json),
+                "--output-json",
+                str(output_json),
+                "--output-markdown",
+                str(output_markdown),
+                "--output-unresolved",
+                str(output_unresolved),
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            payload = json.loads(output_json.read_text(encoding="utf-8"))
+            self.assertIn(
+                "Missing required simulation_vs_data comparison for wave_speed",
+                payload["unresolved"],
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -43,6 +43,9 @@ The older `/root/.codex/skills/modern-physics-latex-report-rennovated/` package 
 
 - Keep stage order and gate decisions visible.
 - Decide whether a step should stay inline, use a smaller worker, or stay local.
+- Pause when `agent_proposed_key_results` exist and wait for item-level user confirmation instead of silently promoting new scientific scope.
+- Track proposal confirmation state per proposed result (`pending_user`, `approved`, `rejected`, `needs_revision`) in the controller-state artifact.
+- Reroute only approved proposals back through `course-lab-run-plan`, upstream recomputation leaves, and confirmed-reference reuse.
 - Track reroutes after QC instead of treating QC as the terminal step.
 - Preserve a compact memory of leaf ownership instead of copying their manuals.
 - Keep artifact handoffs explicit, including the `course-lab-data-processing -> course-lab-final-staging` calculation-details appendix manifest flow.

@@ -68,9 +68,12 @@
 - Invoke when: confirmed transferred data must become processed numeric artifacts.
 - Required inputs: user-validated transfer artifacts and handout requirements.
 - Emits: processed-data artifacts and calculation outputs.
+- Emits: rerun-ready processed artifacts when newly confirmed comparison quantities must be computed on rerun.
 - Delegation preference: Prefer Inline / Main Agent.
 - QC reroute ownership: data inconsistency, table inconsistency, missing processing detail.
 - Does not own: raw transfer, plotting prose, final staging prose.
+- Does not own: importance judgment, literature search, or interpretation prose.
+- Reroute note: compute newly required confirmed quantities on rerun and keep outputs comparison-ready.
 
 ## course-lab-uncertainty-analysis
 - Invoke when: uncertainty requirements must be computed from processed data and handout rules.
@@ -91,10 +94,11 @@
 ## course-lab-results-interpretation
 - Invoke when: processed results need evidence-grounded interpretation before discussion or final staging.
 - Required inputs: processed-data artifacts, normalized handout artifacts, optional plots or modeling outputs.
-- Emits: interpretation JSON, Markdown, and unresolved support gaps.
+- Emits: interpretation JSON, Markdown, unresolved support gaps, and `agent_proposed_key_results` when new important results are found.
 - Delegation preference: Prefer Inline / Main Agent.
 - QC reroute ownership: missing, weak, contradictory, or insufficiently structured evidence support.
 - Does not own: final discussion harmonization, figure placement, compile/QC.
+- Does not own: official plan promotion or confirmed-reference reuse by itself.
 
 ## course-lab-discussion-ideas
 - Invoke when: stable interpretation artifacts need discussion directions before synthesis.
@@ -114,12 +118,15 @@
 
 ## course-lab-final-staging
 - Invoke when: stable scaffold, processing, interpretation, and discussion artifacts must become the late non-figure draft.
-- Required inputs: canonical report workspace, scaffold, processed artifacts, interpretation artifacts, discussion artifacts, optional modeling or appendix inputs.
+- Required inputs: canonical report workspace, scaffold, processed artifacts, interpretation artifacts, discussion artifacts, confirmed-reference reuse artifacts, optional modeling or appendix inputs.
 - Emits: staged late-draft TeX changes plus staging summaries and unresolved notes.
 - Emits: comparison-case handoff data in the staging summary when same-case observed/simulation assets were normalized for downstream figure pairing.
+- Emits: confirmed literature-reference summaries for downstream confirmed-reference reuse without re-searching.
 - Delegation preference: Explicit Stay-Local.
 - QC reroute ownership: thin staged prose, missing mathematical procedures, weak case coverage, page-count shortfall.
 - Does not own: figure placement, compile loop, direct final QC.
+- Does not own: literature search, proposal confirmation, or post hoc scope growth.
+- Reroute note: consume confirmed comparison artifacts and confirmed references only after the parent reroute only approved proposals.
 
 ## course-lab-figure-evidence
 - Invoke when: the staged draft already exists and placement-ready evidence groups must be inserted.

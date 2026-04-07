@@ -44,9 +44,32 @@ class TestRecoveryContractPlaceholder(unittest.TestCase):
             "late-stage ownership log",
             "last mutating leaf for each owned late-stage region or bucket",
             "rerun history and the reason for each reroute",
+            "agent_proposed_key_results",
+            "proposal confirmation state",
+            "pending_user",
+            "approved",
+            "rejected",
+            "needs_revision",
+            "only approved proposals",
             "preserve unresolved gaps",
             "sequential repair planning",
             "prefer inline recovery",
+        ]
+        for snippet in expected_snippets:
+            with self.subTest(snippet=snippet):
+                self.assertIn(snippet, text)
+
+    def test_leaf_responsibility_matrix_covers_proposal_and_reference_ownership(self) -> None:
+        text = (PACKAGE_ROOT / "references" / "leaf_responsibility_matrix.md").read_text(
+            encoding="utf-8"
+        )
+        expected_snippets = [
+            "reroute only approved proposals",
+            "confirmed-reference reuse",
+            "compute newly required confirmed quantities on rerun",
+            "comparison-ready",
+            "consume confirmed comparison artifacts and confirmed references",
+            "literature search",
         ]
         for snippet in expected_snippets:
             with self.subTest(snippet=snippet):

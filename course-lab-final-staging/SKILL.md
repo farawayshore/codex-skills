@@ -20,6 +20,7 @@ This package is independent and uses only local copied tools under `/root/.codex
 - Stable processed-data artifacts already exist.
 - Stable results-interpretation artifacts already exist.
 - Stable discussion-synthesis artifacts already exist.
+- Confirmed references may already exist as an explicit upstream artifact and should be rendered downstream without re-searching.
 - Optional modeling artifacts or appendix code files may also exist and should be staged into the report when relevant.
 
 Do not use this skill to transfer raw data, recompute uncertainties, execute modeling, place late figures, compile the report, or take over final QC.
@@ -44,6 +45,8 @@ Do not use this skill to transfer raw data, recompute uncertainties, execute mod
 - Prefer compact tables for those middle uncertainty results when several quantities must be shown together, especially in two-column report layouts.
 - Format detailed propagation equations so they can wrap cleanly inside a two-column page, using multi-line math instead of one unbroken inline expression.
 - Include modeling results when modeling artifacts exist.
+- Accept confirmed references through `--references-json` and render only the staged `literature_report` entries that upstream leaves already confirmed.
+- Preserve confirmed references in the staging summary outputs so later report or figure steps can reuse the same downstream-only literature context.
 - Convert synthesized discussion artifacts into final report prose without hiding unresolved support limits.
 - Attach explicit calculation details in the appendix when `course-lab-data-processing` provides a `--calculation-details-manifest` handoff.
 - Place `Calculation Details` before `Code` in appendix rendering when both are present.
@@ -53,6 +56,7 @@ Do not use this skill to transfer raw data, recompute uncertainties, execute mod
 - Require the caller to pass appendix code paths explicitly through `--appendix-code` when discovered simulation or modeling scripts should appear in the report appendix.
 - Require the caller to pass appendix data-file paths explicitly through `--appendix-data` when staged CSV bundles should appear in the report appendix.
 - Require the caller to pass the calculation-details manifest explicitly through `--calculation-details-manifest`; this skill does not discover calculation-detail attachments by scanning the workspace.
+- Require the caller to pass confirmed references explicitly through `--references-json`; this skill does not discover literature sources from search specs, raw URLs, or workspace scans.
 - Render explicitly provided appendix code as selectable report text when the downstream build path supports it, using compact styled code blocks rather than path-only placeholders.
 - Skip appendix data files that are already cited by filename in the current report draft, so the appendix only catches still-unmentioned staged CSV attachments.
 - Emit:
@@ -60,6 +64,7 @@ Do not use this skill to transfer raw data, recompute uncertainties, execute mod
   - `final_staging_summary.md`
   - `final_staging_unresolved.md`
   - `appendix_code_manifest.json`
+- Include filtered confirmed literature references in `final_staging_summary.json` when `--references-json` is provided, but do not invent new comparison sources at this stage.
 - Include normalized `comparison_cases` in `final_staging_summary.json` when case-paired observed/simulation assets were discovered, so `course-lab-figure-evidence` can place same-case experiment-vs-simulation figures instead of rediscovering those pairings.
 
 ## Primary Command
@@ -73,6 +78,7 @@ python3 /root/.codex/skills/course-lab-final-staging/scripts/build_final_staging
   --calculation-details-manifest "/path/to/results/<experiment>/analysis/calculation_details_manifest.json" \
   --results-interpretation-json "/path/to/results/<experiment>/results_interpretation.json" \
   --discussion-synthesis-json "/path/to/results/<experiment>/discussion_synthesis.json" \
+  --references-json "/path/to/results/<experiment>/analysis/reference_values.json" \
   --modeling-result "/path/to/results/<experiment>/modeling/batch_run_result.json" \
   --appendix-data "/path/to/results/<experiment>/analysis/appendix_data/case1_measurements.csv" \
   --appendix-data "/path/to/results/<experiment>/analysis/appendix_data/case2_measurements.csv" \
@@ -94,14 +100,15 @@ python3 /root/.codex/skills/course-lab-final-staging/scripts/build_final_staging
 6. Render direct results and indirect results per case so former results remain visible instead of compressed away.
 7. For each indirect result with staged uncertainty support, show the specialized partial derivative propagation formula and the substituted values that evaluate it, preferring tables for grouped middle values and line-breakable math for two-column drafts.
 8. Render one comparison block per validated comparison case when paired evidence or explicit `comparison_cases` records exist, but switch to a compact matrix-style rendering when many cases would otherwise consume too much body space.
-9. Insert interpretation bridges, modeling results, and synthesized discussion where the artifact evidence supports them.
-10. If some comparison-case material cannot be mapped safely, keep that gap visible in unresolved outputs instead of silently shortening the report.
-11. Stage explicit calculation details as appendix attachments before data files and code when the caller provides a calculation-details manifest.
-12. Stage appendix data-file references and distinct colored CSV listings when `--appendix-data` files are provided and the current draft does not already cite them by filename.
-13. Stage appendix code references and compact styled code listings when major code files are provided.
-14. Treat calculation details, appendix data files, and appendix code as explicit caller-owned handoffs: this skill does not discover those attachments from workspace scans, discovery manifests, or result folders on its own.
-15. Emit staging summaries and unresolved-gap notes.
-16. Stop and hand off to `course-lab-figure-evidence`, then final QC.
+9. Render confirmed literature-backed comparison context only when `--references-json` provides staged `literature_report` entries; do not search for literature or infer missing citations here.
+10. Insert interpretation bridges, modeling results, and synthesized discussion where the artifact evidence supports them.
+11. If some comparison-case material cannot be mapped safely, keep that gap visible in unresolved outputs instead of silently shortening the report.
+12. Stage explicit calculation details as appendix attachments before data files and code when the caller provides a calculation-details manifest.
+13. Stage appendix data-file references and distinct colored CSV listings when `--appendix-data` files are provided and the current draft does not already cite them by filename.
+14. Stage appendix code references and compact styled code listings when major code files are provided.
+15. Treat calculation details, appendix data files, appendix code, and confirmed references as explicit caller-owned handoffs: this skill does not discover those attachments from workspace scans, discovery manifests, result folders, or late search logic on its own.
+16. Emit staging summaries and unresolved-gap notes.
+17. Stop and hand off to `course-lab-figure-evidence`, then final QC.
 
 ## Boundary Rules
 
@@ -117,6 +124,7 @@ python3 /root/.codex/skills/course-lab-final-staging/scripts/build_final_staging
 - This skill does not discover calculation details files from discovery artifacts or result directories; callers must pass that manifest explicitly.
 - This skill does not discover appendix data files from discovery artifacts or result directories; callers must pass those CSV paths explicitly.
 - This skill does not discover appendix code files from discovery artifacts or result directories; callers must pass those paths explicitly.
+- This skill does not discover literature at late stage; confirmed references must arrive through `--references-json`.
 - This skill should fail clearly instead of overwriting substantive user prose in an owned section unless the block is explicitly draft-like or intentionally handed over with `% course-lab-final-staging:allow-overwrite`.
 - When `staging_mode: "summary_only_existing_draft"` is explicitly set in `body_scaffold.json`, preserving substantive user prose and emitting a summary-only rerun is the intended behavior rather than a failure.
 - Keep all runtime tool usage local to this standalone folder.

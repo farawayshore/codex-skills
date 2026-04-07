@@ -30,6 +30,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--discussion-synthesis-markdown")
     parser.add_argument("--plots-manifest")
     parser.add_argument("--modeling-result")
+    parser.add_argument("--references-json")
     parser.add_argument("--appendix-code", action="append")
     parser.add_argument("--appendix-data", action="append")
     parser.add_argument("--calculation-details-manifest")
@@ -83,6 +84,24 @@ def summary_markdown(payload: dict[str, object]) -> str:
             observed_path = str(case.get("observed_asset_path") or "").strip()
             comparison_path = str(case.get("comparison_asset_path") or "").strip()
             lines.append(f"- {case_label}: observed={observed_path or 'None'}, comparison={comparison_path or 'None'}")
+    else:
+        lines.append("- None")
+
+    lines.extend(["", "## Literature References", ""])
+    literature_references = list(payload.get("literature_references", []))
+    if literature_references:
+        for entry in literature_references:
+            if not isinstance(entry, dict):
+                continue
+            label = str(entry.get("label") or entry.get("name") or "Reference").strip()
+            source = str(entry.get("source_title") or entry.get("source") or "").strip()
+            lane = str(entry.get("lane") or "").strip()
+            rendered = f"- {label}"
+            if lane:
+                rendered += f" [{lane}]"
+            if source:
+                rendered += f": {source}"
+            lines.append(rendered)
     else:
         lines.append("- None")
 
@@ -225,6 +244,7 @@ def main() -> int:
         "written_sections": written_section_names,
         "case_records": rendered_sections["case_records"],
         "comparison_cases": list(payload.get("comparison_cases") or []),
+        "literature_references": list(payload.get("literature_references") or []),
         "appendix_entries": appendix["appendix_entries"],
         "unresolved": unresolved,
         "length_goal": "Favor substantive completeness toward a two-column 20-30 page final PDF after figure placement and QC compilation.",

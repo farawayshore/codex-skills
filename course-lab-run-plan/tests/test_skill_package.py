@@ -31,6 +31,8 @@ class CourseLabRunPlanPackageTests(unittest.TestCase):
         self.assertIn("planning-only", text.lower())
         self.assertIn("json", text.lower())
         self.assertIn("markdown", text.lower())
+        self.assertIn("comparison_obligations", text)
+        self.assertIn("confirmed-agent-key-results-json", text)
         self.assertIn("do not use this skill to", text.lower())
         self.assertIn("tex", text.lower())
         self.assertIn("data transfer", text.lower())

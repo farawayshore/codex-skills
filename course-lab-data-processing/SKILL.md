@@ -17,6 +17,7 @@ This skill is standalone with local copied tools. It should not reach back into 
 - The transferred data has already been shown to the user and explicitly validated.
 - The matching handout is available and can be read before the calculation pass.
 - The run needs direct uncertainty summaries, indirect quantities, or propagated uncertainty artifacts before interpretation starts.
+- The parent reroute may have approved newly confirmed key quantities that now need a fresh processing pass before comparison resumes.
 - Measurement resolution or instrument information is known, or the run needs a visible provisional state for missing resolution data.
 
 Do not use this skill to choose the experiment, transcribe raw data, stage figures, write interpretation prose, compare with theory, or draft the final discussion.
@@ -43,6 +44,7 @@ Do not use this skill to choose the experiment, transcribe raw data, stage figur
 - Cover every corresponding indirect measured quantity requested in the handout when the validated data are sufficient.
 - If a handout-requested indirect quantity cannot yet be computed from validated data, emit a visible unresolved artifact instead of omitting it quietly.
 - Keep missing resolution information visible. If a resolution is not yet known, do not invent it.
+- On reruns, recompute only the newly confirmed or newly required quantities that upstream comparison obligations added, and keep those outputs comparison-ready for later interpretation.
 - When later report assembly needs appendix-ready calculation detail, emit `calculation_details_manifest.json` plus generated `.tex` attachments that present a compact formula-first derivation supplement rather than a raw numeric dump.
 - Prefer symbolic calculation flow, partial-derivative propagation structure, and a visible appendix-style callout block over exhaustive value tables.
 - Treat those generated calculation-detail attachments as appendix material that may use full-width pages, so readable derivation notation such as `\sqrt{...}` is preferred over special compressed formatting that only exists to protect narrow two-column layouts.
@@ -133,7 +135,8 @@ Example compact appendix spec shape:
 8. Run `scripts/propagate_uncertainties.py` on that spec.
 9. If the report will need appendix-side calculation detail, run `scripts/render_calculation_details.py` so the derivation chain is preserved outside the main body in a compact appendix style.
 10. When the appendix would otherwise become too long, set `focus_derived` in the spec so only the key formulas and propagation steps are emitted.
-11. Review the direct and derived outputs together, checking for provisional resolution fields, notation mismatches, handout-requested quantities that are still unresolved, and whether the generated appendix attachments emphasize derivation structure instead of raw numeric repetition.
+11. On parent-driven reruns, limit the processing update to the newly confirmed quantities that became official scope while preserving earlier validated outputs unless the new contract explicitly supersedes them.
+12. Review the direct and derived outputs together, checking for provisional resolution fields, notation mismatches, handout-requested quantities that are still unresolved, and whether the generated appendix attachments emphasize derivation structure instead of raw numeric repetition.
 
 ## Quick Reference
 
@@ -152,6 +155,7 @@ Example compact appendix spec shape:
 
 - This skill starts only after transferred data is confirmed by the user.
 - This skill owns uncertainty artifacts, not interpretation prose.
+- This skill may rerun for newly confirmed key quantities, but it still does not own importance judgment or interpretation prose.
 - Handout notation wins over ambiguous transferred shorthand.
 - Do not collapse quantity and unit into one name just because the table header uses a slash.
 - Do not algebraically simplify a direct measured symbol just because it contains a numeric factor or familiar sub-expression.

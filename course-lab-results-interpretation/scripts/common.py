@@ -6,6 +6,15 @@ from pathlib import Path
 from typing import Any
 
 NORMALIZED_KEY_RE = re.compile(r"(?m)^- Normalized key: `([^`]+)`\s*$")
+PRIMARY_COMPARISON_LANES = {
+    "theory_vs_data",
+    "simulation_vs_data",
+    "literature_report_vs_data",
+}
+SUPPORTING_BASES = {
+    "handout_standard",
+    "internet_reference",
+}
 
 
 def read_json(path: Path) -> Any:
@@ -131,3 +140,57 @@ def extract_handout_expectations(summary: dict[str, object]) -> dict[str, object
         "simulation_required": simulation_required,
         "compare_simulation_to_theory": compare_simulation_to_theory,
     }
+
+
+def load_confirmed_comparison_obligations(path: Path | None) -> list[dict[str, Any]]:
+    if path is None or not path.exists():
+        return []
+
+    payload = read_json(path)
+    if not isinstance(payload, dict):
+        raise SystemExit(f"Expected JSON object at {path}")
+
+    obligations = payload.get("comparison_obligations", [])
+    if not isinstance(obligations, list):
+        return []
+
+    sanitized: list[dict[str, Any]] = []
+    for entry in obligations:
+        if not isinstance(entry, dict):
+            continue
+        name = str(entry.get("name") or "").strip()
+        if not name:
+            continue
+        if str(entry.get("confirmation_state") or "").strip() != "confirmed":
+            continue
+
+        required_lanes = [
+            value
+            for value in entry.get("required_lanes", [])
+            if isinstance(value, str) and value in PRIMARY_COMPARISON_LANES
+        ]
+        optional_lanes = [
+            value
+            for value in entry.get("optional_lanes", [])
+            if isinstance(value, str) and value in PRIMARY_COMPARISON_LANES and value not in required_lanes
+        ]
+        supporting_bases = [
+            value
+            for value in entry.get("supporting_bases", [])
+            if isinstance(value, str) and value in SUPPORTING_BASES
+        ]
+
+        sanitized.append(
+            {
+                "name": name,
+                "label": str(entry.get("label") or name),
+                "result_kind": str(entry.get("result_kind") or "reported"),
+                "importance_origin": str(entry.get("importance_origin") or "handout_required"),
+                "confirmation_state": "confirmed",
+                "required_lanes": required_lanes,
+                "optional_lanes": optional_lanes,
+                "supporting_bases": supporting_bases,
+            }
+        )
+
+    return sanitized

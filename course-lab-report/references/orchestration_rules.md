@@ -43,6 +43,12 @@ After the early setup stages, run-plan artifacts become the main routing aid.
 - `course-lab-run-plan` should emit the artifacts the parent uses to decide what happens next.
 - optional leaves may be skipped only when the run plan makes that safe and explicit.
 - The parent should keep unresolved handout gaps visible instead of silently assuming a later leaf is optional.
+- If `course-lab-results-interpretation` emits `agent_proposed_key_results`, the parent should pause instead of silently broadening official scope.
+- The parent should store proposal confirmation state per item, not as one batch flag.
+- Valid proposal confirmation states are `pending_user`, `approved`, `rejected`, and `needs_revision`.
+- Only approved proposals may update the official run-plan scope or confirmed-reference artifacts.
+- `needs_revision` should reroute only to `course-lab-results-interpretation`; it should not promote plan scope.
+- Approved reroutes may revisit `course-lab-data-processing`, modeling, plotting, and `course-lab-results-interpretation` when newly confirmed scope requires upstream recomputation.
 
 ## Stop Points
 
@@ -50,6 +56,7 @@ After the early setup stages, run-plan artifacts become the main routing aid.
 - Stop when canonical workspace information is still ambiguous.
 - Stop when required upstream artifacts are missing.
 - Stop when a later stage depends on user confirmation that has not yet happened.
+- Stop when proposal confirmation state is still `pending_user` for any item that would change comparison scope.
 
 ## Controller State Contract
 
@@ -62,10 +69,21 @@ It should record:
 - confirmed discovery selections
 - canonical workspace and TeX target
 - stage completion status with emitted artifact paths
+- `agent_proposed_key_results` and each proposal confirmation state
 - stable evidence-plan state
 - late-stage ownership log
 - last mutating leaf for each owned late-stage region or bucket
 - rerun history and the reason for each reroute
+
+## Proposal Reroute Loop
+
+When `agent_proposed_key_results` exist, the parent owns the pause / confirm / reroute loop.
+
+1. Pause and surface each proposal with its current proposal confirmation state.
+2. Wait for user confirmation and record `pending_user`, `approved`, `rejected`, or `needs_revision` item by item.
+3. Reroute only approved proposals through `course-lab-run-plan`, required upstream recomputation leaves, and confirmed-reference promotion.
+4. Keep rejected items and needs-revision items out of official scope promotion.
+5. Repeat until no unresolved proposal confirmation state remains for scope-changing items.
 
 ## Conservative Error Handling
 

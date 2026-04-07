@@ -40,6 +40,16 @@ Use these local rules when turning normalized handout artifacts into a run-plan 
 - Tables and images should stay visible as table/image evidence, not flattened into generic prose.
 - A single cue may appear in more than one bucket when it genuinely serves multiple later skills.
 
+## Comparison-Obligation Rules
+
+- Keep `comparison_obligations` as the run-plan source of truth for handout-required and already confirmed key comparison results.
+- Map strong theory or discrepancy cues to `required_lanes: ["theory_vs_data"]` unless the handout clearly requires another primary lane.
+- Map explicit simulation or modeling cues to `simulation_vs_data`; keep literature-facing promotion on `literature_report_vs_data`.
+- Use only these lane names: `theory_vs_data`, `simulation_vs_data`, `literature_report_vs_data`.
+- Use only these supporting bases: `handout_standard`, `internet_reference`.
+- Promote agent-added results only when they are already confirmed or approved by the parent flow.
+- Reject helper-variable or temporary names such as `*_helper`, `tmp_*`, or other intermediate-only placeholders.
+
 ## Unresolved-Gap Rules
 
 - If a cue includes signals such as `missing`, `TBD`, `unclear`, `to be confirmed`, or `specify which`, keep it in bucket-level `unresolved_gaps`.

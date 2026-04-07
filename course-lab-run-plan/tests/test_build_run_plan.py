@@ -10,8 +10,10 @@ from pathlib import Path
 
 SKILL_DIR = Path(__file__).resolve().parents[1]
 SCRIPT_DIR = SKILL_DIR / "scripts"
-if str(SCRIPT_DIR) not in sys.path:
-    sys.path.insert(0, str(SCRIPT_DIR))
+if str(SCRIPT_DIR) in sys.path:
+    sys.path.remove(str(SCRIPT_DIR))
+sys.path.insert(0, str(SCRIPT_DIR))
+sys.modules.pop("common", None)
 
 from build_run_plan import build_run_plan
 
@@ -62,6 +64,7 @@ class BuildRunPlanTests(unittest.TestCase):
                 "source_artifacts",
                 "run_readiness",
                 "leaf_skill_handoffs",
+                "comparison_obligations",
                 "global_enrichment_opportunities",
                 "global_unresolved_gaps",
             },
@@ -94,7 +97,96 @@ class BuildRunPlanTests(unittest.TestCase):
         self.assertTrue(plan["run_readiness"]["has_procedure_content"])
         self.assertTrue(plan["run_readiness"]["has_required_observations"])
         self.assertFalse(plan["run_readiness"]["has_explicit_deliverables"])
+        self.assertIsInstance(plan["comparison_obligations"], list)
         self.assertFalse(plan["global_unresolved_gaps"])
+
+    def test_build_run_plan_emits_comparison_obligations_for_handout_required_results(self) -> None:
+        plan = build_run_plan(
+            sections=self.load_sections(),
+            sections_markdown=(FIXTURES / "sample_sections.md").read_text(encoding="utf-8"),
+            workspace=Path("/tmp/demo"),
+            experiment_name="Interference Lab",
+            experiment_safe_name="interference_lab",
+            report_language="English",
+        )
+
+        obligation_names = {item["name"] for item in plan["comparison_obligations"]}
+        self.assertIn("fringe_spacing", obligation_names)
+        self.assertIn("wavelength", obligation_names)
+
+        fringe_spacing = next(item for item in plan["comparison_obligations"] if item["name"] == "fringe_spacing")
+        self.assertEqual(fringe_spacing["importance_origin"], "handout_required")
+        self.assertEqual(fringe_spacing["confirmation_state"], "confirmed")
+        self.assertIn("theory_vs_data", fringe_spacing["required_lanes"])
+        self.assertIn("handout_standard", fringe_spacing["supporting_bases"])
+
+    def test_build_run_plan_promotes_approved_agent_results_without_promoting_pending_ones(self) -> None:
+        plan = build_run_plan(
+            sections=self.load_sections(),
+            sections_markdown=(FIXTURES / "sample_sections.md").read_text(encoding="utf-8"),
+            workspace=Path("/tmp/demo"),
+            experiment_name="Interference Lab",
+            experiment_safe_name="interference_lab",
+            report_language="English",
+            confirmed_agent_key_results=[
+                {
+                    "name": "mode_shape_case_4",
+                    "label": "Case 4 mode shape",
+                    "result_kind": "qualitative",
+                    "importance_reason": "Central mode-identification result",
+                },
+                {
+                    "name": "candidate_pending_result",
+                    "label": "Pending user result",
+                    "confirmation_state": "pending_user",
+                    "result_kind": "qualitative",
+                },
+            ],
+        )
+
+        obligation_names = {item["name"] for item in plan["comparison_obligations"]}
+        self.assertIn("mode_shape_case_4", obligation_names)
+        self.assertNotIn("candidate_pending_result", obligation_names)
+
+        promoted = next(item for item in plan["comparison_obligations"] if item["name"] == "mode_shape_case_4")
+        self.assertEqual(promoted["importance_origin"], "agent_confirmed")
+        self.assertEqual(promoted["confirmation_state"], "confirmed")
+
+    def test_build_run_plan_rejects_helper_variables_and_keeps_lane_whitelists(self) -> None:
+        plan = build_run_plan(
+            sections=self.load_sections(),
+            sections_markdown=(FIXTURES / "sample_sections.md").read_text(encoding="utf-8"),
+            workspace=Path("/tmp/demo"),
+            experiment_name="Interference Lab",
+            experiment_safe_name="interference_lab",
+            report_language="English",
+            confirmed_agent_key_results=[
+                {
+                    "name": "lambda_helper",
+                    "label": "Lambda helper",
+                    "result_kind": "quantitative",
+                }
+            ],
+        )
+
+        obligation_names = {item["name"] for item in plan["comparison_obligations"]}
+        self.assertNotIn("lambda_helper", obligation_names)
+        for obligation in plan["comparison_obligations"]:
+            self.assertTrue(
+                set(obligation["required_lanes"]).issubset(
+                    {"theory_vs_data", "simulation_vs_data", "literature_report_vs_data"}
+                )
+            )
+            self.assertTrue(
+                set(obligation.get("optional_lanes", [])).issubset(
+                    {"theory_vs_data", "simulation_vs_data", "literature_report_vs_data"}
+                )
+            )
+            self.assertTrue(
+                set(obligation.get("supporting_bases", [])).issubset(
+                    {"handout_standard", "internet_reference"}
+                )
+            )
 
     def test_builder_synthesizes_deliverables_focus_and_enrichment_for_each_bucket(self) -> None:
         plan = build_run_plan(
@@ -246,11 +338,26 @@ class BuildRunPlanTests(unittest.TestCase):
             root = Path(temp_name)
             sections_json = root / "sample_sections.json"
             sections_markdown = root / "sample_sections.md"
+            confirmed_agent_key_results_json = root / "confirmed_agent_key_results.json"
             output_json = root / "interference_lab_run_plan.json"
             output_markdown = root / "interference_lab_run_plan.md"
 
             sections_json.write_text(json.dumps(sections, indent=2), encoding="utf-8")
             sections_markdown.write_text((FIXTURES / "sample_sections.md").read_text(encoding="utf-8"), encoding="utf-8")
+            confirmed_agent_key_results_json.write_text(
+                json.dumps(
+                    [
+                        {
+                            "name": "mode_shape_case_4",
+                            "label": "Case 4 mode shape",
+                            "result_kind": "qualitative",
+                            "importance_reason": "Central mode-identification result",
+                        }
+                    ],
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
 
             subprocess.run(
                 [
@@ -268,6 +375,8 @@ class BuildRunPlanTests(unittest.TestCase):
                     "interference_lab",
                     "--report-language",
                     "English",
+                    "--confirmed-agent-key-results-json",
+                    str(confirmed_agent_key_results_json),
                     "--output-json",
                     str(output_json),
                     "--output-markdown",
@@ -283,5 +392,7 @@ class BuildRunPlanTests(unittest.TestCase):
             self.assertTrue(output_markdown.exists())
             for bucket_key in payload["leaf_skill_handoffs"]:
                 self.assertIn(bucket_key, markdown)
+            self.assertIn("Comparison Obligations", markdown)
+            self.assertTrue(any(item["name"] == "mode_shape_case_4" for item in payload["comparison_obligations"]))
             self.assertIn("Global Unresolved Gaps", markdown)
             self.assertIn(unresolved_note, markdown)

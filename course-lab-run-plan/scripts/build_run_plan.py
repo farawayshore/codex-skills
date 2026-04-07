@@ -245,6 +245,65 @@ BUCKET_SYNTHESIS_DEFAULTS: dict[str, dict[str, tuple[str, ...]]] = {
         ),
     },
 }
+ALLOWED_COMPARISON_LANES = (
+    "theory_vs_data",
+    "simulation_vs_data",
+    "literature_report_vs_data",
+)
+ALLOWED_SUPPORTING_BASES = (
+    "handout_standard",
+    "internet_reference",
+)
+HELPER_RESULT_TOKENS = (
+    "helper",
+    "tmp",
+    "temp",
+    "placeholder",
+    "intermediate",
+    "aux",
+)
+RESULT_SIGNAL_SPECS: tuple[dict[str, Any], ...] = (
+    {"name": "wavelength", "label": "Wavelength", "result_kind": "quantitative", "keywords": ("wavelength", "lambda")},
+    {
+        "name": "fringe_spacing",
+        "label": "Fringe spacing",
+        "result_kind": "quantitative",
+        "keywords": ("fringe spacing", "spacing of the fringes"),
+    },
+    {
+        "name": "wave_speed",
+        "label": "Wave speed",
+        "result_kind": "quantitative",
+        "keywords": ("wave speed", "c_bar", "c bar", "波速"),
+    },
+    {
+        "name": "youngs_modulus",
+        "label": "Young's modulus",
+        "result_kind": "quantitative",
+        "keywords": ("young's modulus", "youngs modulus", "杨氏模量"),
+    },
+    {"name": "density", "label": "Density", "result_kind": "quantitative", "keywords": ("density", "密度")},
+    {"name": "frequency", "label": "Frequency", "result_kind": "quantitative", "keywords": ("frequency", "频率")},
+    {"name": "radius", "label": "Radius", "result_kind": "quantitative", "keywords": ("radius", "半径")},
+    {
+        "name": "mode_shape",
+        "label": "Mode shape",
+        "result_kind": "qualitative",
+        "keywords": ("mode shape", "mode pattern", "pattern shape", "振型"),
+    },
+    {
+        "name": "central_maximum",
+        "label": "Central maximum profile",
+        "result_kind": "qualitative",
+        "keywords": ("central maximum", "sharp or broadened", "broadened"),
+    },
+    {
+        "name": "alignment_condition",
+        "label": "Alignment condition",
+        "result_kind": "qualitative",
+        "keywords": ("misalignment", "stray-light", "stray light", "alignment"),
+    },
+)
 
 
 def _clip_text(value: str, limit: int = 96) -> str:
@@ -296,6 +355,249 @@ def _append_bucket_values(
 ) -> None:
     for value in values:
         append_unique(leaf_skill_handoffs[bucket_key], field_name, value)
+
+
+def _slugify_result_name(value: str) -> str:
+    lowered = normalize_text(value).lower().replace("'", "")
+    slug = re.sub(r"[^a-z0-9]+", "_", lowered).strip("_")
+    if not slug:
+        return "comparison_result"
+    if slug[0].isdigit():
+        slug = f"result_{slug}"
+    return slug
+
+
+def _normalize_lane_values(values: list[str] | tuple[str, ...] | None) -> list[str]:
+    normalized: list[str] = []
+    for value in values or []:
+        cleaned = normalize_text(value).lower()
+        if cleaned in ALLOWED_COMPARISON_LANES and cleaned not in normalized:
+            normalized.append(cleaned)
+    return normalized
+
+
+def _normalize_supporting_bases(values: list[str] | tuple[str, ...] | None) -> list[str]:
+    normalized: list[str] = []
+    for value in values or []:
+        cleaned = normalize_text(value).lower()
+        if cleaned in ALLOWED_SUPPORTING_BASES and cleaned not in normalized:
+            normalized.append(cleaned)
+    return normalized
+
+
+def _is_helper_result_name(name: str) -> bool:
+    normalized = normalize_text(name).lower()
+    return any(token in normalized for token in HELPER_RESULT_TOKENS)
+
+
+def _find_result_signal_spec(text: str) -> dict[str, Any] | None:
+    lowered = normalize_text(text).lower()
+    for spec in RESULT_SIGNAL_SPECS:
+        if any(keyword in lowered for keyword in spec["keywords"]):
+            return spec
+    return None
+
+
+def _infer_result_kind(text: str, fallback: str | None = None) -> str:
+    if fallback in {"quantitative", "qualitative"}:
+        return fallback
+    lowered = normalize_text(text).lower()
+    qualitative_tokens = (
+        "mode",
+        "pattern",
+        "shape",
+        "photo",
+        "observation",
+        "sharp",
+        "broad",
+        "alignment",
+        "stray",
+    )
+    if any(token in lowered for token in qualitative_tokens):
+        return "qualitative"
+    return "quantitative"
+
+
+def _infer_lane_sets(
+    signal_text: str,
+    *,
+    result_kind: str,
+    has_references: bool,
+    has_simulation_context: bool,
+) -> tuple[list[str], list[str], list[str]]:
+    lowered = normalize_text(signal_text).lower()
+    required_lanes: list[str] = []
+    optional_lanes: list[str] = []
+    supporting_bases = ["handout_standard"]
+
+    if has_any_keyword(lowered, SIMULATION_KEYWORDS):
+        append_unique_list(required_lanes, "simulation_vs_data")
+    if has_any_keyword(lowered, REFERENCE_KEYWORDS):
+        append_unique_list(required_lanes, "literature_report_vs_data")
+    if (
+        has_any_keyword(
+            lowered,
+            (
+                "compare",
+                "theory",
+                "theoretical",
+                "prediction",
+                "equation",
+                "estimate",
+                "calculate",
+                "derived",
+            ),
+        )
+        or has_any_keyword(lowered, PROCESSING_KEYWORDS)
+        or not required_lanes
+    ):
+        append_unique_list(required_lanes, "theory_vs_data")
+
+    if has_simulation_context and result_kind == "qualitative" and "simulation_vs_data" not in required_lanes:
+        append_unique_list(optional_lanes, "simulation_vs_data")
+    if has_references and "literature_report_vs_data" not in required_lanes:
+        append_unique_list(optional_lanes, "literature_report_vs_data")
+        append_unique_list(supporting_bases, "internet_reference")
+    if "literature_report_vs_data" in required_lanes:
+        append_unique_list(supporting_bases, "internet_reference")
+
+    return required_lanes, optional_lanes, supporting_bases
+
+
+def _make_comparison_obligation(
+    *,
+    name: str,
+    label: str,
+    result_kind: str,
+    importance_origin: str,
+    importance_reason: str,
+    required_lanes: list[str],
+    optional_lanes: list[str],
+    supporting_bases: list[str],
+    source_signals: list[str],
+    confirmation_state: str = "confirmed",
+) -> dict[str, Any]:
+    return {
+        "name": name,
+        "label": label,
+        "result_kind": result_kind,
+        "importance_origin": importance_origin,
+        "importance_reason": importance_reason,
+        "confirmation_state": confirmation_state,
+        "required_lanes": _normalize_lane_values(required_lanes),
+        "optional_lanes": _normalize_lane_values(optional_lanes),
+        "supporting_bases": _normalize_supporting_bases(supporting_bases),
+        "source_signals": [value for value in source_signals if value],
+    }
+
+
+def _record_comparison_obligation(
+    obligations_by_name: dict[str, dict[str, Any]],
+    obligation: dict[str, Any] | None,
+) -> None:
+    if not obligation:
+        return
+    existing = obligations_by_name.get(obligation["name"])
+    if not existing:
+        obligations_by_name[obligation["name"]] = obligation
+        return
+    for field_name in ("required_lanes", "optional_lanes", "supporting_bases", "source_signals"):
+        for value in obligation[field_name]:
+            if value not in existing[field_name]:
+                existing[field_name].append(value)
+    if not existing["importance_reason"] and obligation["importance_reason"]:
+        existing["importance_reason"] = obligation["importance_reason"]
+
+
+def _build_handout_comparison_obligation(
+    signal_text: str,
+    *,
+    origin_reason: str,
+    facts: dict[str, Any],
+    allow_generic_label: bool = False,
+) -> dict[str, Any] | None:
+    spec = _find_result_signal_spec(signal_text)
+    if spec is None and not allow_generic_label:
+        return None
+
+    if spec is None:
+        label = _clip_text(signal_text, limit=80)
+        name = _slugify_result_name(label)
+        result_kind = _infer_result_kind(signal_text)
+    else:
+        label = spec["label"]
+        name = spec["name"]
+        result_kind = spec["result_kind"]
+
+    if _is_helper_result_name(name):
+        return None
+
+    required_lanes, optional_lanes, supporting_bases = _infer_lane_sets(
+        signal_text,
+        result_kind=result_kind,
+        has_references=facts["has_references"],
+        has_simulation_context=bool(facts["simulation_cues"]),
+    )
+    return _make_comparison_obligation(
+        name=name,
+        label=label,
+        result_kind=result_kind,
+        importance_origin="handout_required",
+        importance_reason=origin_reason,
+        required_lanes=required_lanes,
+        optional_lanes=optional_lanes,
+        supporting_bases=supporting_bases,
+        source_signals=[signal_text],
+    )
+
+
+def _build_agent_confirmed_obligation(
+    item: dict[str, Any],
+    *,
+    facts: dict[str, Any],
+) -> dict[str, Any] | None:
+    confirmation_state = normalize_text(item.get("confirmation_state") or item.get("status") or "confirmed").lower()
+    if confirmation_state and confirmation_state not in {"confirmed", "approved"}:
+        return None
+
+    label = normalize_text(item.get("label", ""))
+    importance_reason = normalize_text(item.get("importance_reason", ""))
+    raw_name = normalize_text(item.get("name", "")) or _slugify_result_name(label or importance_reason)
+    name = _slugify_result_name(raw_name)
+    if _is_helper_result_name(name):
+        return None
+
+    combined_text = " ".join(part for part in (name, label, importance_reason) if part)
+    spec = _find_result_signal_spec(combined_text)
+    label = label or (spec["label"] if spec else raw_name.replace("_", " ").strip().title())
+    result_kind = _infer_result_kind(combined_text, fallback=normalize_text(item.get("result_kind", "")).lower())
+
+    required_lanes = _normalize_lane_values(item.get("required_lanes"))
+    optional_lanes = _normalize_lane_values(item.get("optional_lanes"))
+    supporting_bases = _normalize_supporting_bases(item.get("supporting_bases"))
+    if not required_lanes and not optional_lanes:
+        required_lanes, optional_lanes, inferred_supporting_bases = _infer_lane_sets(
+            combined_text,
+            result_kind=result_kind,
+            has_references=facts["has_references"],
+            has_simulation_context=bool(facts["simulation_cues"]),
+        )
+        if not supporting_bases:
+            supporting_bases = inferred_supporting_bases
+    elif not supporting_bases:
+        supporting_bases = ["internet_reference"] if "literature_report_vs_data" in required_lanes else ["handout_standard"]
+
+    return _make_comparison_obligation(
+        name=name,
+        label=label,
+        result_kind=result_kind,
+        importance_origin="agent_confirmed",
+        importance_reason=importance_reason or "User-approved agent-confirmed comparison result.",
+        required_lanes=required_lanes,
+        optional_lanes=optional_lanes,
+        supporting_bases=supporting_bases,
+        source_signals=[combined_text],
+    )
 
 
 def _collect_handout_facts(sections: dict[str, Any]) -> dict[str, Any]:
@@ -814,6 +1116,68 @@ def _route_handout_cues(sections: dict[str, Any]) -> tuple[dict[str, dict[str, A
     return leaf_skill_handoffs, global_unresolved_gaps
 
 
+def build_comparison_obligations(
+    *,
+    sections: dict[str, Any],
+    sections_markdown: str,
+    confirmed_agent_key_results: list[dict[str, Any]] | None = None,
+) -> list[dict[str, Any]]:
+    del sections_markdown  # Reserved for future rule expansion; structured sections drive current extraction.
+
+    facts = _collect_handout_facts(sections)
+    obligations_by_name: dict[str, dict[str, Any]] = {}
+
+    for signal_text in facts["result_families"]:
+        _record_comparison_obligation(
+            obligations_by_name,
+            _build_handout_comparison_obligation(
+                signal_text,
+                origin_reason="Handout explicitly names this required result family for later comparison.",
+                facts=facts,
+                allow_generic_label=True,
+            ),
+        )
+
+    for signal_text in facts["comparison_cues"]:
+        _record_comparison_obligation(
+            obligations_by_name,
+            _build_handout_comparison_obligation(
+                signal_text,
+                origin_reason="Handout comparison cue requires this result to stay in the official comparison contract.",
+                facts=facts,
+            ),
+        )
+
+    for signal_text in facts["processing_cues"]:
+        _record_comparison_obligation(
+            obligations_by_name,
+            _build_handout_comparison_obligation(
+                signal_text,
+                origin_reason="Handout processing cue names a comparison-ready quantity that later skills must preserve.",
+                facts=facts,
+            ),
+        )
+
+    for signal_text in facts["required_observations"]:
+        _record_comparison_obligation(
+            obligations_by_name,
+            _build_handout_comparison_obligation(
+                signal_text,
+                origin_reason="Required observation should stay visible for later comparison and discrepancy analysis.",
+                facts=facts,
+            ),
+        )
+
+    for item in confirmed_agent_key_results or []:
+        if isinstance(item, dict):
+            _record_comparison_obligation(
+                obligations_by_name,
+                _build_agent_confirmed_obligation(item, facts=facts),
+            )
+
+    return sorted(obligations_by_name.values(), key=lambda item: item["name"])
+
+
 def build_run_plan(
     *,
     sections: dict[str, Any],
@@ -822,6 +1186,7 @@ def build_run_plan(
     experiment_name: str,
     experiment_safe_name: str,
     report_language: str | None = None,
+    confirmed_agent_key_results: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     leaf_skill_handoffs, global_unresolved_gaps = _route_handout_cues(sections)
     global_enrichment_opportunities = _synthesize_bucket_content(leaf_skill_handoffs, sections)
@@ -842,6 +1207,11 @@ def build_run_plan(
         ),
         "run_readiness": build_run_readiness(sections, sections_markdown),
         "leaf_skill_handoffs": leaf_skill_handoffs,
+        "comparison_obligations": build_comparison_obligations(
+            sections=sections,
+            sections_markdown=sections_markdown,
+            confirmed_agent_key_results=confirmed_agent_key_results,
+        ),
         "global_enrichment_opportunities": global_enrichment_opportunities,
         "global_unresolved_gaps": global_unresolved_gaps,
     }
@@ -896,6 +1266,27 @@ def render_run_plan_markdown(plan: dict[str, Any]) -> str:
             else:
                 lines.append("- None")
 
+    lines.extend(["", "## Comparison Obligations"])
+    if plan["comparison_obligations"]:
+        for obligation in plan["comparison_obligations"]:
+            lines.extend(
+                [
+                    f"### {obligation['label']} (`{obligation['name']}`)",
+                    f"- Importance Origin: {obligation['importance_origin']}",
+                    f"- Confirmation State: {obligation['confirmation_state']}",
+                    f"- Result Kind: {obligation['result_kind']}",
+                    f"- Required Lanes: {', '.join(obligation['required_lanes']) or 'None'}",
+                    f"- Optional Lanes: {', '.join(obligation['optional_lanes']) or 'None'}",
+                    f"- Supporting Bases: {', '.join(obligation['supporting_bases']) or 'None'}",
+                    f"- Importance Reason: {obligation['importance_reason']}",
+                ]
+            )
+            if obligation["source_signals"]:
+                lines.append("- Source Signals:")
+                lines.extend(f"  - {value}" for value in obligation["source_signals"])
+    else:
+        lines.append("- None")
+
     lines.extend(["", "## Global Enrichment Opportunities"])
     if plan["global_enrichment_opportunities"]:
         lines.extend(f"- {value}" for value in plan["global_enrichment_opportunities"])
@@ -919,6 +1310,20 @@ def _read_sections_json(path: Path) -> dict[str, Any]:
     return payload
 
 
+def _read_confirmed_agent_key_results(path: Path | None) -> list[dict[str, Any]]:
+    if path is None:
+        return []
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if isinstance(payload, list):
+        return [item for item in payload if isinstance(item, dict)]
+    if isinstance(payload, dict):
+        for key in ("confirmed_agent_key_results", "agent_key_results", "key_results"):
+            value = payload.get(key)
+            if isinstance(value, list):
+                return [item for item in value if isinstance(item, dict)]
+    raise SystemExit(f"Expected a list of confirmed agent key results in {path}")
+
+
 def _write_json(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2, ensure_ascii=True) + "\n", encoding="utf-8")
@@ -937,6 +1342,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--experiment-name", required=True)
     parser.add_argument("--experiment-safe-name", required=True)
     parser.add_argument("--report-language")
+    parser.add_argument("--confirmed-agent-key-results-json")
     parser.add_argument("--output-json", required=True)
     parser.add_argument("--output-markdown", required=True)
     return parser.parse_args()
@@ -953,6 +1359,9 @@ def main() -> int:
         experiment_name=args.experiment_name,
         experiment_safe_name=args.experiment_safe_name,
         report_language=args.report_language,
+        confirmed_agent_key_results=_read_confirmed_agent_key_results(
+            Path(args.confirmed_agent_key_results_json) if args.confirmed_agent_key_results_json else None
+        ),
     )
     _write_json(Path(args.output_json), plan)
     _write_text(Path(args.output_markdown), render_run_plan_markdown(plan))

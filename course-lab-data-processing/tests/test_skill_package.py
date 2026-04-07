@@ -37,6 +37,9 @@ class CourseLabDataProcessingPackageTests(unittest.TestCase):
         self.assertIn("propagation", text.lower())
         self.assertIn("calculation_details_manifest.json", text)
         self.assertIn("helper quantity", text.lower())
+        self.assertIn("newly confirmed", text.lower())
+        self.assertIn("comparison-ready", text.lower())
+        self.assertIn("interpretation prose", text.lower())
         self.assertNotIn("modern-physics-latex-report-rennovated/scripts/compute_uncertainties.py", text)
 
     def test_parent_skill_mentions_uncertainty_subskill(self) -> None:

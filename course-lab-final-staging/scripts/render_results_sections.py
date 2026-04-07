@@ -647,6 +647,39 @@ def _render_comparison_cases(cases: list[dict[str, object]]) -> list[str]:
     return lines
 
 
+def _render_literature_reference_context(references: list[dict[str, object]]) -> list[str]:
+    if not references:
+        return []
+
+    lines = [r"\paragraph{Confirmed Literature Context}", r"\begin{itemize}"]
+    for entry in references:
+        if not isinstance(entry, dict):
+            continue
+        label = latex_escape(str(entry.get("label") or entry.get("name") or "Literature reference"))
+        source_title = latex_escape(str(entry.get("source_title") or "").strip())
+        source = latex_escape(str(entry.get("source") or "").strip())
+        summary = latex_escape(str(entry.get("summary") or "").strip())
+        lane = latex_escape(str(entry.get("lane") or "").strip())
+        value = str(entry.get("value") or "").strip()
+        unit = latex_escape(str(entry.get("unit") or "").strip())
+
+        parts = [label]
+        if lane:
+            parts.append(f"lane {lane}")
+        if summary:
+            parts.append(summary)
+        if value:
+            rendered_value = value if not unit else f"{value} {unit}"
+            parts.append(f"reported reference value {rendered_value}")
+        if source_title:
+            parts.append(source_title)
+        if source:
+            parts.append(source)
+        lines.append(rf"  \item {'; '.join(part for part in parts if part)}")
+    lines.extend([r"\end{itemize}", ""])
+    return lines
+
+
 def render_results_sections(payload: dict[str, object]) -> dict[str, object]:
     processed_payload = payload["processed_payload"]
     cases = payload["cases"]
@@ -654,6 +687,7 @@ def render_results_sections(payload: dict[str, object]) -> dict[str, object]:
     discussion_payload = payload["discussion_synthesis"]
     modeling_payload = payload.get("modeling_payload")
     comparison_cases = list(payload.get("comparison_cases") or [])
+    literature_references = list(payload.get("literature_references") or [])
     workspace_root = Path(payload["main_tex_path"]).parent
 
     unresolved: list[str] = []
@@ -787,6 +821,7 @@ def render_results_sections(payload: dict[str, object]) -> dict[str, object]:
                 )
 
     results_lines.extend(_render_comparison_cases(comparison_cases))
+    results_lines.extend(_render_literature_reference_context(literature_references))
 
     if isinstance(modeling_payload, dict) and modeling_payload.get("outputs"):
         if results_lines and results_lines[-1] != "":
