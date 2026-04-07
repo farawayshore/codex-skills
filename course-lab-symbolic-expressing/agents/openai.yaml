@@ -1,0 +1,3 @@
+name: course-lab-symbolic-expressing
+description: Optional course-lab helper for temporary TeX symbolic calculation-route artifacts.
+default_prompt: "Use $course-lab-symbolic-expressing only when explicit handout, calculation-code, processed-result, result-key, and output paths are provided. Write temporary TeX explanation artifacts, return the tex_path through response JSON, keep unresolved formula gaps visible, and do not mutate main.tex or recompute official results."

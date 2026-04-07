@@ -39,6 +39,10 @@ The older `/root/.codex/skills/modern-physics-latex-report-rennovated/` package 
 16. `course-lab-figure-evidence`
 17. `course-lab-finalize-qc`
 
+## Optional Helper Leaves
+
+- `course-lab-symbolic-expressing`: optional result-explanation helper that reads explicit handout, calculation-code, processed-result, result-key, and output paths, then returns a temp TeX path plus unresolved notes to the caller. It is not a required stage between `course-lab-data-processing` and `course-lab-final-staging`.
+
 ## Parent-Only Responsibilities
 
 - Keep stage order and gate decisions visible.
@@ -52,6 +56,7 @@ The older `/root/.codex/skills/modern-physics-latex-report-rennovated/` package 
 - Track reroutes after QC instead of treating QC as the terminal step.
 - Preserve a compact memory of leaf ownership instead of copying their manuals.
 - Keep artifact handoffs explicit, including the `course-lab-data-processing -> course-lab-final-staging` calculation-details appendix manifest flow.
+- Keep artifact handoffs explicit for optional `course-lab-symbolic-expressing` calls: callers must pass source paths and consume the returned temp TeX path; the parent must not treat this helper as proof that final-staging ran.
 - Keep artifact handoffs explicit, including the `course-lab-final-staging -> course-lab-figure-evidence` comparison-case handoff needed for same-case experiment-versus-simulation figure placement.
 - The parent must not silently continue past `course-lab-experiment-principle` without explicit principle-stage artifact proof.
 - The parent must not treat manually written theory prose as proof that principle-image staging ran.
