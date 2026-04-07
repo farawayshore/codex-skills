@@ -183,6 +183,83 @@ def normalize_calculation_detail_entries(manifest_path: Path | None) -> list[dic
     return entries
 
 
+def _optional_cli_paths(values: list[str] | None) -> list[Path]:
+    return [Path(str(value).strip()) for value in values or [] if str(value).strip()]
+
+
+def normalize_symbolic_handoff(args: Any) -> dict[str, object]:
+    handout_raw = str(getattr(args, "symbolic_handout", None) or "").strip()
+    handout_path = Path(handout_raw) if handout_raw else None
+    calculation_code_paths = _optional_cli_paths(getattr(args, "symbolic_calculation_code", None))
+    processed_result_paths = _optional_cli_paths(getattr(args, "symbolic_processed_result", None))
+    result_keys = [
+        str(value).strip()
+        for value in getattr(args, "symbolic_result_key", None) or []
+        if str(value).strip()
+    ]
+    output_dir_raw = str(getattr(args, "symbolic_output_dir", None) or "").strip()
+    output_dir = Path(output_dir_raw) if output_dir_raw else None
+
+    desired = bool(handout_path or calculation_code_paths or processed_result_paths or result_keys or output_dir)
+    unresolved: list[str] = []
+    if desired:
+        if handout_path is None:
+            unresolved.append("Symbolic handoff requested but symbolic handout path is missing; pass --symbolic-handout.")
+        elif not handout_path.exists():
+            unresolved.append(f"Symbolic handoff requested but symbolic handout path does not exist: {handout_path}")
+
+        if not calculation_code_paths:
+            unresolved.append(
+                "Symbolic handoff requested but symbolic calculation code path is missing; pass --symbolic-calculation-code."
+            )
+        else:
+            for path in calculation_code_paths:
+                if not path.exists():
+                    unresolved.append(f"Symbolic handoff requested but symbolic calculation code path does not exist: {path}")
+
+        if not processed_result_paths:
+            unresolved.append(
+                "Symbolic handoff requested but symbolic processed result path is missing; pass --symbolic-processed-result."
+            )
+        else:
+            for path in processed_result_paths:
+                if not path.exists():
+                    unresolved.append(f"Symbolic handoff requested but symbolic processed result path does not exist: {path}")
+
+        if not result_keys:
+            unresolved.append("Symbolic handoff requested but symbolic result key is missing; pass --symbolic-result-key.")
+
+        if output_dir is None:
+            unresolved.append("Symbolic handoff requested but symbolic output dir is missing; pass --symbolic-output-dir.")
+
+        if len(processed_result_paths) > 1 and len(processed_result_paths) != len(result_keys):
+            unresolved.append(
+                "Symbolic processed result paths are ambiguous; pass one --symbolic-processed-result for all selected keys "
+                "or the same count as --symbolic-result-key."
+            )
+
+    processed_result_by_key: dict[str, str] = {}
+    if len(processed_result_paths) == len(result_keys):
+        processed_result_by_key = {
+            result_key: str(path)
+            for result_key, path in zip(result_keys, processed_result_paths)
+        }
+    elif len(processed_result_paths) == 1:
+        processed_result_by_key = {result_key: str(processed_result_paths[0]) for result_key in result_keys}
+
+    return {
+        "desired": desired,
+        "enabled": desired and not unresolved,
+        "handout_path": str(handout_path) if handout_path is not None else "",
+        "calculation_code_paths": [str(path) for path in calculation_code_paths],
+        "processed_result_paths": [str(path) for path in processed_result_paths],
+        "processed_result_by_key": processed_result_by_key,
+        "result_keys": result_keys,
+        "output_dir": str(output_dir) if output_dir is not None else "",
+        "unresolved": unresolved,
+    }
+
+
 def first_present_comparison_cases(
     interpretation_payload: dict[str, object],
     processed_payload: dict[str, object],
@@ -521,6 +598,7 @@ def collect_staging_inputs(args: Any) -> dict[str, object]:
     appendix_entries = normalize_appendix_entries(list(args.appendix_code or []))
     appendix_data_entries = normalize_appendix_data_entries(list(getattr(args, "appendix_data", []) or []))
     calculation_detail_entries = normalize_calculation_detail_entries(calculation_details_manifest_path)
+    symbolic_handoff = normalize_symbolic_handoff(args)
     workspace_root = main_tex_path.parent
 
     explicit_comparison_cases = first_present_comparison_cases(
@@ -562,6 +640,7 @@ def collect_staging_inputs(args: Any) -> dict[str, object]:
         "appendix_entries": appendix_entries,
         "appendix_data_entries": appendix_data_entries,
         "calculation_detail_entries": calculation_detail_entries,
+        "symbolic_handoff": symbolic_handoff,
         "comparison_cases": normalized_comparison_cases,
         "comparison_case_unresolved": comparison_case_unresolved,
     }

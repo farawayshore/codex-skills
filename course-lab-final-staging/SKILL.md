@@ -44,6 +44,9 @@ Do not use this skill to transfer raw data, recompute uncertainties, execute mod
 - After those formulas, write the substituted key quantities and evaluated steps that lead to the reported uncertainty, including direct-summary terms such as `s`, `u_a`, `u_b`, `u_c`, and the final expanded uncertainty when those artifacts exist.
 - Prefer compact tables for those middle uncertainty results when several quantities must be shown together, especially in two-column report layouts.
 - Format detailed propagation equations so they can wrap cleanly inside a two-column page, using multi-line math instead of one unbroken inline expression.
+- When an indirect result still lacks enough undergraduate-readable mathematical procedure after the staged processing and uncertainty artifacts are rendered, use the optional helper `course-lab-symbolic-expressing` more eagerly if the caller has explicitly provided a symbolic handout, symbolic calculation code, symbolic processed result, symbolic result key, and symbolic output dir.
+- Invoke `/root/.codex/skills/course-lab-symbolic-expressing/scripts/render_symbolic_explanation.py` only from those explicit handoffs, consume the returned `tex_path` where it is safely inside the symbolic output dir, and inline the returned temporary TeX content only inside final-staging-owned result/procedure sections.
+- Treat `course-lab-symbolic-expressing` as an optional helper, not a required stage: if the symbolic handoff is incomplete or the helper cannot trace the selected result, keep the gap visible in `final_staging_unresolved.md` instead of recomputing results or scanning the workspace.
 - Include modeling results when modeling artifacts exist.
 - Accept confirmed references through `--references-json` and render only the staged `literature_report` entries that upstream leaves already confirmed.
 - Preserve confirmed references in the staging summary outputs so later report or figure steps can reuse the same downstream-only literature context.
@@ -56,6 +59,7 @@ Do not use this skill to transfer raw data, recompute uncertainties, execute mod
 - Require the caller to pass appendix code paths explicitly through `--appendix-code` when discovered simulation or modeling scripts should appear in the report appendix.
 - Require the caller to pass appendix data-file paths explicitly through `--appendix-data` when staged data bundles should appear in the report appendix.
 - Require the caller to pass the calculation-details manifest explicitly through `--calculation-details-manifest`; this skill does not discover calculation-detail attachments by scanning the workspace.
+- Require symbolic handoff paths explicitly through `--symbolic-handout`, `--symbolic-calculation-code`, `--symbolic-processed-result`, `--symbolic-result-key`, and `--symbolic-output-dir` when the optional helper is desired; this skill does not discover those handoff files by scanning the workspace.
 - Require the caller to pass confirmed references explicitly through `--references-json`; this skill does not discover literature sources from search specs, raw URLs, or workspace scans.
 - Render explicitly provided appendix code as selectable report text when the downstream build path supports it, using compact styled code blocks rather than path-only placeholders.
 - Skip appendix data files that are already cited by filename in the current report draft, so the appendix only catches still-unmentioned staged data attachments.
@@ -76,6 +80,11 @@ python3 /root/.codex/skills/course-lab-final-staging/scripts/build_final_staging
   --procedures-markdown "/path/to/results/<experiment>/<experiment-safe-name>_procedures.md" \
   --processed-data-json "/path/to/results/<experiment>/analysis/processed_data.json" \
   --calculation-details-manifest "/path/to/results/<experiment>/analysis/calculation_details_manifest.json" \
+  --symbolic-handout "/path/to/results/<experiment>/decoded_handout.md" \
+  --symbolic-calculation-code "/path/to/results/<experiment>/analysis/process_data.py" \
+  --symbolic-processed-result "/path/to/results/<experiment>/analysis/derived_uncertainty.json" \
+  --symbolic-result-key "wave_speed" \
+  --symbolic-output-dir "/path/to/results/<experiment>/analysis/symbolic_expressing/tmp" \
   --results-interpretation-json "/path/to/results/<experiment>/results_interpretation.json" \
   --discussion-synthesis-json "/path/to/results/<experiment>/discussion_synthesis.json" \
   --references-json "/path/to/results/<experiment>/analysis/reference_values.json" \
@@ -99,16 +108,17 @@ python3 /root/.codex/skills/course-lab-final-staging/scripts/build_final_staging
 5. Write report-ready narration for the corresponding uncertainty-calculation procedure.
 6. Render direct results and indirect results per case so former results remain visible instead of compressed away.
 7. For each indirect result with staged uncertainty support, show the specialized partial derivative propagation formula and the substituted values that evaluate it, preferring tables for grouped middle values and line-breakable math for two-column drafts.
-8. Render one comparison block per validated comparison case when paired evidence or explicit `comparison_cases` records exist, but switch to a compact matrix-style rendering when many cases would otherwise consume too much body space.
-9. Render confirmed literature-backed comparison context only when `--references-json` provides staged `literature_report` entries; do not search for literature or infer missing citations here.
-10. Insert interpretation bridges, modeling results, and synthesized discussion where the artifact evidence supports them.
-11. If some comparison-case material cannot be mapped safely, keep that gap visible in unresolved outputs instead of silently shortening the report.
-12. Stage explicit calculation details as appendix attachments before data files and code when the caller provides a calculation-details manifest.
-13. Stage appendix data-record references and distinct colored data listings when `--appendix-data` files are provided and the current draft does not already cite them by filename.
-14. Stage appendix code references and compact styled code listings when major code files are provided.
-15. Treat calculation details, appendix data files, appendix code, and confirmed references as explicit caller-owned handoffs: this skill does not discover those attachments from workspace scans, discovery manifests, result folders, or late search logic on its own.
-16. Emit staging summaries and unresolved-gap notes.
-17. Stop and hand off to `course-lab-figure-evidence`, then final QC.
+8. If selected indirect results still lack adequate mathematical procedure detail and the caller supplied the full symbolic handoff, call `course-lab-symbolic-expressing` with the explicit handout, calculation-code, processed-result, result-key, and output paths; consume the returned `tex_path` only when safe.
+9. Render one comparison block per validated comparison case when paired evidence or explicit `comparison_cases` records exist, but switch to a compact matrix-style rendering when many cases would otherwise consume too much body space.
+10. Render confirmed literature-backed comparison context only when `--references-json` provides staged `literature_report` entries; do not search for literature or infer missing citations here.
+11. Insert interpretation bridges, modeling results, and synthesized discussion where the artifact evidence supports them.
+12. If some comparison-case material cannot be mapped safely, keep that gap visible in unresolved outputs instead of silently shortening the report.
+13. Stage explicit calculation details as appendix attachments before data files and code when the caller provides a calculation-details manifest.
+14. Stage appendix data-record references and distinct colored data listings when `--appendix-data` files are provided and the current draft does not already cite them by filename.
+15. Stage appendix code references and compact styled code listings when major code files are provided.
+16. Treat calculation details, appendix data files, appendix code, confirmed references, and symbolic-expressing inputs as explicit caller-owned handoffs: this skill does not discover those attachments from workspace scans, discovery manifests, result folders, or late search logic on its own.
+17. Emit staging summaries and unresolved-gap notes.
+18. Stop and hand off to `course-lab-figure-evidence`, then final QC.
 
 ## Boundary Rules
 
@@ -121,9 +131,11 @@ python3 /root/.codex/skills/course-lab-final-staging/scripts/build_final_staging
 - This skill does not compile the report.
 - This skill does not choose or refresh the TeX compiler; final build-path ownership stays with final QC.
 - This skill does not take over final QC.
+- `course-lab-symbolic-expressing` is not a required stage and does not mutate `main.tex`; final-staging remains the report mutation owner and may only inline returned temporary TeX inside its owned section bodies.
 - This skill does not discover calculation details files from discovery artifacts or result directories; callers must pass that manifest explicitly.
 - This skill does not discover appendix data files from discovery artifacts or result directories; callers must pass those data-file paths explicitly.
 - This skill does not discover appendix code files from discovery artifacts or result directories; callers must pass those paths explicitly.
+- This skill does not discover symbolic handout, calculation-code, processed-result, result-key, or output-dir inputs; callers must pass those paths and keys explicitly when symbolic support is desired.
 - This skill does not discover literature at late stage; confirmed references must arrive through `--references-json`.
 - This skill should fail clearly instead of overwriting substantive user prose in an owned section unless the block is explicitly draft-like or intentionally handed over with `% course-lab-final-staging:allow-overwrite`.
 - When `staging_mode: "summary_only_existing_draft"` is explicitly set in `body_scaffold.json`, preserving substantive user prose and emitting a summary-only rerun is the intended behavior rather than a failure.
@@ -136,6 +148,8 @@ python3 /root/.codex/skills/course-lab-final-staging/scripts/build_final_staging
 - Letting many comparison cases expand into a long stack of near-duplicate paragraph blocks when a compact comparison matrix would preserve more space for later evidence.
 - Listing only final indirect values without showing the data-processing route or uncertainty route.
 - Stopping at a generic propagation definition when the staged artifacts are rich enough to show the specific partial derivative formula and substituted values for that indirect result.
+- Ignoring a complete symbolic-expressing handoff when an indirect result still lacks undergraduate-readable mathematical procedure detail.
+- Treating symbolic-expressing as mandatory, allowing it to recompute results, or letting it mutate `main.tex` directly instead of returning a `tex_path` for final-staging to consume.
 - Leaving uncertainty middle results in paragraph-long prose when a compact table would keep the two-column report readable.
 - Emitting one unbroken propagation expression that overflows the column instead of using multi-line math that can wrap.
 - Leaving modeling outputs detached from the report when modeling artifacts already exist.

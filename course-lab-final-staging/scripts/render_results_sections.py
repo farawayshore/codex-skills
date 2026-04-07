@@ -1,11 +1,19 @@
 from __future__ import annotations
 
+import json
 import re
+import subprocess
+import sys
 from pathlib import Path
 
 from common import latex_escape, maybe_read_json
 from sympy import Symbol, latex as sympy_latex, pi as sympy_pi, sqrt as sympy_sqrt
 from sympy.parsing.sympy_parser import parse_expr
+
+
+SYMBOLIC_HELPER_SCRIPT = Path(
+    "/root/.codex/skills/course-lab-symbolic-expressing/scripts/render_symbolic_explanation.py"
+)
 
 
 def _procedure_items(text: str) -> list[str]:
@@ -424,6 +432,146 @@ def _render_propagation_details(
     return [*lines, ""]
 
 
+def _result_key(item: dict[str, object]) -> str:
+    return str(item.get("name") or item.get("key") or item.get("canonical_key") or "").strip()
+
+
+def _has_embedded_procedure_detail(item: dict[str, object]) -> bool:
+    for field_name in (
+        "procedure_tex",
+        "derivation_tex",
+        "calculation_route",
+        "calculation_procedure",
+        "mathematical_procedure",
+    ):
+        if str(item.get(field_name) or "").strip():
+            return True
+    return False
+
+
+def _needs_symbolic_explanation(
+    item: dict[str, object],
+    *,
+    workspace_root: Path,
+) -> bool:
+    if _has_embedded_procedure_detail(item):
+        return False
+    return not _propagation_detail_block(item, workspace_root=workspace_root)
+
+
+def _safe_tex_path(tex_path: Path, output_dir: Path) -> bool:
+    if not tex_path.exists() or not tex_path.is_file():
+        return False
+
+    try:
+        tex_path.resolve().relative_to(output_dir.resolve())
+    except ValueError:
+        return False
+    return True
+
+
+def _symbolic_response_path(output_dir: Path, result_key: str) -> Path:
+    slug = re.sub(r"[^A-Za-z0-9_.-]+", "-", result_key.strip()).strip("-") or "symbolic-result"
+    return output_dir / f"{slug}_symbolic_response.json"
+
+
+def _processed_result_path_for_key(handoff: dict[str, object], result_key: str) -> str:
+    processed_result_by_key = handoff.get("processed_result_by_key")
+    if isinstance(processed_result_by_key, dict):
+        processed_path = str(processed_result_by_key.get(result_key) or "").strip()
+        if processed_path:
+            return processed_path
+
+    paths = [str(path).strip() for path in handoff.get("processed_result_paths", []) if str(path).strip()]
+    return paths[0] if paths else ""
+
+
+def _run_symbolic_helper(
+    handoff: dict[str, object],
+    *,
+    result_key: str,
+) -> tuple[list[str], list[str]]:
+    unresolved: list[str] = []
+    if not SYMBOLIC_HELPER_SCRIPT.exists():
+        return [], [f"Symbolic helper script is missing: {SYMBOLIC_HELPER_SCRIPT}"]
+
+    output_dir = Path(str(handoff.get("output_dir") or ""))
+    response_path = _symbolic_response_path(output_dir, result_key)
+    command = [
+        sys.executable,
+        str(SYMBOLIC_HELPER_SCRIPT),
+        "--handout",
+        str(handoff.get("handout_path") or ""),
+        "--processed-result",
+        _processed_result_path_for_key(handoff, result_key),
+        "--result-key",
+        result_key,
+        "--output-dir",
+        str(output_dir),
+        "--output-response-json",
+        str(response_path),
+    ]
+    for code_path in handoff.get("calculation_code_paths", []):
+        command.extend(["--calculation-code", str(code_path)])
+
+    completed = subprocess.run(command, capture_output=True, text=True, check=False)
+    if completed.returncode != 0:
+        detail = (completed.stderr or completed.stdout).strip()
+        if detail:
+            return [], [f"Symbolic helper failed for {result_key}: {detail}"]
+        return [], [f"Symbolic helper failed for {result_key} with exit code {completed.returncode}."]
+
+    try:
+        response = json.loads(response_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        return [], [f"Symbolic helper response could not be read for {result_key}: {exc}"]
+
+    for item in response.get("unresolved", []):
+        if str(item).strip():
+            unresolved.append(str(item).strip())
+
+    tex_path = Path(str(response.get("tex_path") or ""))
+    if not _safe_tex_path(tex_path, output_dir):
+        unresolved.append(f"Symbolic helper returned an unsafe or missing TeX path for {result_key}: {tex_path}")
+        return [], unresolved
+
+    return [
+        r"\paragraph{Symbolic Calculation Route}",
+        f"% course-lab-symbolic-expressing:tex_path={tex_path}",
+        *tex_path.read_text(encoding="utf-8").rstrip("\n").splitlines(),
+        "",
+    ], unresolved
+
+
+def _render_symbolic_handoff_blocks(
+    items: list[dict[str, object]],
+    handoff: dict[str, object],
+    *,
+    workspace_root: Path,
+) -> tuple[list[str], list[str]]:
+    if not handoff.get("enabled"):
+        return [], []
+
+    selected_keys = {str(key).strip() for key in handoff.get("result_keys", []) if str(key).strip()}
+    lines: list[str] = []
+    unresolved: list[str] = []
+
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        result_key = _result_key(item)
+        if result_key not in selected_keys:
+            continue
+        if not _needs_symbolic_explanation(item, workspace_root=workspace_root):
+            continue
+
+        block_lines, block_unresolved = _run_symbolic_helper(handoff, result_key=result_key)
+        lines.extend(block_lines)
+        unresolved.extend(block_unresolved)
+
+    return lines, unresolved
+
+
 def _effective_uncertainty(
     item: dict[str, object],
     *,
@@ -688,9 +836,13 @@ def render_results_sections(payload: dict[str, object]) -> dict[str, object]:
     modeling_payload = payload.get("modeling_payload")
     comparison_cases = list(payload.get("comparison_cases") or [])
     literature_references = list(payload.get("literature_references") or [])
+    symbolic_handoff = payload.get("symbolic_handoff") if isinstance(payload.get("symbolic_handoff"), dict) else {}
     workspace_root = Path(payload["main_tex_path"]).parent
 
     unresolved: list[str] = []
+    if symbolic_handoff.get("desired"):
+        unresolved.extend(str(item) for item in symbolic_handoff.get("unresolved", []) if str(item).strip())
+
     interpretation_index = _interpretation_index(interpretation_payload)
     all_results = [
         item
@@ -703,6 +855,20 @@ def render_results_sections(payload: dict[str, object]) -> dict[str, object]:
         str(item.get("uncertainty") or "").strip() or _source_record(item, workspace_root=workspace_root) is not None
         for item in all_results
     )
+    if symbolic_handoff.get("enabled"):
+        available_indirect_keys = {
+            _result_key(item)
+            for case in cases
+            if isinstance(case, dict)
+            for item in list(case.get("indirect_results") or [])
+            if isinstance(item, dict) and _result_key(item)
+        }
+        for result_key in symbolic_handoff.get("result_keys", []):
+            cleaned_key = str(result_key).strip()
+            if cleaned_key and cleaned_key not in available_indirect_keys:
+                unresolved.append(
+                    f"Symbolic result key was requested but was not present among rendered indirect results: {cleaned_key}"
+                )
 
     process_lines = [
         r"\subsection{Data-Processing Procedure}",
@@ -792,6 +958,13 @@ def render_results_sections(payload: dict[str, object]) -> dict[str, object]:
                 workspace_root=workspace_root,
             )
         )
+        symbolic_lines, symbolic_unresolved = _render_symbolic_handoff_blocks(
+            normalized_indirect_results,
+            symbolic_handoff,
+            workspace_root=workspace_root,
+        )
+        results_lines.extend(symbolic_lines)
+        unresolved.extend(symbolic_unresolved)
 
         matched_names = [
             str(item.get("name") or "")

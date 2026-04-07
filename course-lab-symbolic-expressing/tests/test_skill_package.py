@@ -5,7 +5,7 @@ from pathlib import Path
 
 
 SKILL_DIR = Path(__file__).resolve().parents[1]
-PARENT_SKILL_PATH = Path("/root/.config/superpowers/worktrees/skills/course-lab-symbolic-expressing/course-lab-report/SKILL.md")
+PARENT_SKILL_PATH = Path("/root/.codex/skills/course-lab-report/SKILL.md")
 
 
 class CourseLabSymbolicExpressingPackageTests(unittest.TestCase):

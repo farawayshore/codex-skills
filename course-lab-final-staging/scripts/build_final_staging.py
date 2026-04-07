@@ -34,6 +34,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--appendix-code", action="append")
     parser.add_argument("--appendix-data", action="append")
     parser.add_argument("--calculation-details-manifest")
+    parser.add_argument("--symbolic-handout")
+    parser.add_argument("--symbolic-calculation-code", action="append")
+    parser.add_argument("--symbolic-processed-result", action="append")
+    parser.add_argument("--symbolic-result-key", action="append")
+    parser.add_argument("--symbolic-output-dir")
     parser.add_argument("--skip-main-tex-mutation", action="store_true")
     return parser
 

@@ -420,6 +420,54 @@ class BuildFinalStagingTests(unittest.TestCase):
             "cited_data_csv": cited_data_csv,
         }
 
+    def add_symbolic_handoff_fixture(
+        self,
+        fixture: dict[str, Path],
+        *,
+        include_processed_record: bool = True,
+    ) -> None:
+        root = fixture["main_tex"].parent
+        symbolic_handout = root / "decoded_handout.md"
+        symbolic_code = root / "analysis" / "symbolic_route.py"
+        symbolic_processed = root / "analysis" / "symbolic_wave_speed.json"
+        symbolic_output_dir = root / "analysis" / "symbolic_expressing" / "tmp"
+
+        write_text(
+            symbolic_handout,
+            "The handout route for Wave Speed uses wave_speed = wavelength * frequency.\n",
+        )
+        write_text(symbolic_code, "wave_speed = wavelength * frequency\n")
+
+        derived: dict[str, object] = {}
+        if include_processed_record:
+            derived["wave_speed"] = {
+                "label": "Wave Speed",
+                "expression": "wavelength * frequency",
+                "unit": "m/s",
+                "value": 20.4,
+            }
+        write_json(
+            symbolic_processed,
+            {
+                "derived": derived,
+            },
+        )
+
+        fixture["symbolic_handout"] = symbolic_handout
+        fixture["symbolic_code"] = symbolic_code
+        fixture["symbolic_processed"] = symbolic_processed
+        fixture["symbolic_output_dir"] = symbolic_output_dir
+
+    def remove_indirect_source_details(self, fixture: dict[str, Path]) -> None:
+        payload = json.loads(fixture["processed_data_json"].read_text(encoding="utf-8"))
+        for case in payload.get("cases", []):
+            if not isinstance(case, dict):
+                continue
+            for item in case.get("indirect_results", []):
+                if isinstance(item, dict):
+                    item["sources"] = []
+        write_json(fixture["processed_data_json"], payload)
+
     def prepare_mechanics_synonym_fixture(self, root: Path) -> dict[str, Path]:
         fixture = self.prepare_fixture(root)
         write_text(
@@ -836,6 +884,92 @@ class BuildFinalStagingTests(unittest.TestCase):
             self.assertIn(r"\left(10.2\times0.2\right)^2 + \left(2\times0.1\right)^2", tex)
             self.assertIn(r"&= 0.25\,\text{m/s}", tex)
             self.assertIn(r"U=2u_c=0.5\,\text{m/s}", tex)
+
+    def test_symbolic_handoff_inlines_returned_tex_when_indirect_result_lacks_procedure_detail(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_name:
+            fixture = self.prepare_fixture(Path(temp_name))
+            self.add_symbolic_handoff_fixture(fixture)
+            self.remove_indirect_source_details(fixture)
+
+            completed = self.run_builder(
+                fixture,
+                extra_args=[
+                    "--symbolic-handout",
+                    str(fixture["symbolic_handout"]),
+                    "--symbolic-calculation-code",
+                    str(fixture["symbolic_code"]),
+                    "--symbolic-processed-result",
+                    str(fixture["symbolic_processed"]),
+                    "--symbolic-result-key",
+                    "wave_speed",
+                    "--symbolic-output-dir",
+                    str(fixture["symbolic_output_dir"]),
+                ],
+            )
+
+            self.assertEqual(completed.returncode, 0, msg=f"{completed.stdout}\n{completed.stderr}")
+            response_path = fixture["symbolic_output_dir"] / "wave_speed_symbolic_response.json"
+            self.assertTrue(response_path.exists())
+            response = json.loads(response_path.read_text(encoding="utf-8"))
+            tex_path = Path(response["tex_path"])
+            self.assertTrue(tex_path.exists())
+
+            tex = fixture["main_tex"].read_text(encoding="utf-8")
+            self.assertIn(r"\paragraph{Symbolic Calculation Route}", tex)
+            self.assertIn(r"\paragraph{Calculation route for Wave Speed}", tex)
+            self.assertIn(r"calculation code evaluates wave\_speed", tex)
+            self.assertIn(r"wavelength * frequency", tex)
+
+    def test_symbolic_handoff_is_optional_and_reports_missing_explicit_inputs(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_name:
+            fixture = self.prepare_fixture(Path(temp_name))
+
+            completed = self.run_builder(
+                fixture,
+                extra_args=[
+                    "--symbolic-result-key",
+                    "wave_speed",
+                    "--symbolic-output-dir",
+                    str(Path(temp_name) / "analysis" / "symbolic_expressing" / "tmp"),
+                ],
+            )
+
+            self.assertEqual(completed.returncode, 0, msg=f"{completed.stdout}\n{completed.stderr}")
+            unresolved = fixture["output_unresolved"].read_text(encoding="utf-8")
+            self.assertIn("symbolic handout", unresolved.lower())
+            self.assertIn("symbolic calculation code", unresolved.lower())
+            self.assertIn("symbolic processed result", unresolved.lower())
+
+            tex = fixture["main_tex"].read_text(encoding="utf-8")
+            self.assertNotIn(r"\paragraph{Calculation route for Wave Speed}", tex)
+
+    def test_symbolic_handoff_reports_helper_unresolved_when_result_cannot_be_traced(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_name:
+            fixture = self.prepare_fixture(Path(temp_name))
+            self.add_symbolic_handoff_fixture(fixture, include_processed_record=False)
+            self.remove_indirect_source_details(fixture)
+
+            completed = self.run_builder(
+                fixture,
+                extra_args=[
+                    "--symbolic-handout",
+                    str(fixture["symbolic_handout"]),
+                    "--symbolic-calculation-code",
+                    str(fixture["symbolic_code"]),
+                    "--symbolic-processed-result",
+                    str(fixture["symbolic_processed"]),
+                    "--symbolic-result-key",
+                    "wave_speed",
+                    "--symbolic-output-dir",
+                    str(fixture["symbolic_output_dir"]),
+                ],
+            )
+
+            self.assertEqual(completed.returncode, 0, msg=f"{completed.stdout}\n{completed.stderr}")
+            unresolved = fixture["output_unresolved"].read_text(encoding="utf-8")
+            self.assertIn("Processed result key was not found: wave_speed", unresolved)
+            tex = fixture["main_tex"].read_text(encoding="utf-8")
+            self.assertIn(r"\NeedsInput{Processed result key was not found: wave\_speed.}", tex)
 
     def test_comparison_cases_with_five_entries_render_compact_comparison_table(self) -> None:
         with tempfile.TemporaryDirectory() as temp_name:
