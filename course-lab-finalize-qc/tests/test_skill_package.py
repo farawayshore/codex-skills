@@ -18,6 +18,7 @@ class CourseLabFinalizeQCPackageTests(unittest.TestCase):
             SKILL_DIR / "scripts" / "common.py",
             SKILL_DIR / "scripts" / "report_qc.py",
             SKILL_DIR / "scripts" / "finalize_qc.py",
+            SKILL_DIR / "scripts" / "reference_procedure_compare.py",
             SKILL_DIR / "tests" / "baseline_failures.md",
         ]
 
@@ -38,6 +39,11 @@ class CourseLabFinalizeQCPackageTests(unittest.TestCase):
         self.assertIn("20 mb", text.lower())
         self.assertIn("20-30", text)
         self.assertIn("$compress-png", text)
+        self.assertIn("--discovery-json", text)
+        self.assertIn("selected_reference_reports", text)
+        self.assertIn("detector", text.lower())
+        self.assertIn("reroute", text.lower())
+        self.assertIn("same-experiment", text.lower())
         self.assertIn("do not use this skill to", text.lower())
         self.assertIn("direct report writing", text.lower())
         self.assertNotIn("modern-physics-latex-report-rennovated/scripts", text)

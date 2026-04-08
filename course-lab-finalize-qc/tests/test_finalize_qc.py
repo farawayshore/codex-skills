@@ -55,6 +55,10 @@ def write_procedures(path: Path) -> None:
     path.write_text("- P01 Record the main observation.\n", encoding="utf-8")
 
 
+def write_json(path: Path, payload: object) -> None:
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
 def write_passing_tex(path: Path) -> None:
     path.write_text(
         "\n".join(
@@ -362,6 +366,287 @@ class FinalizeQCTests(unittest.TestCase):
             self.assertFalse(summary["qc_pass"])
             self.assertIn("FileNotFoundError", summary["qc_stderr"])
             self.assertIn("FileNotFoundError", unresolved.read_text(encoding="utf-8"))
+
+    def test_reference_comparison_runs_only_after_earlier_qc_passes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            workspace = root / "report"
+            workspace.mkdir()
+            asset = root / "build_asset.sh"
+            main_tex = workspace / "main.tex"
+            procedures = workspace / "procedures.md"
+            discovery = workspace / "discovery.json"
+            summary_json = workspace / "final_qc_summary.json"
+            summary_md = workspace / "final_qc_summary.md"
+            unresolved = workspace / "final_qc_unresolved.md"
+
+            write_build_asset(asset, fail=True)
+            write_passing_tex(main_tex)
+            write_procedures(procedures)
+            write_json(discovery, {"reference_selection_status": "selected", "selected_reference_reports": []})
+
+            summary = run_finalize_qc(
+                main_tex=main_tex,
+                procedures=procedures,
+                discovery_json=discovery,
+                output_summary_json=summary_json,
+                output_summary_markdown=summary_md,
+                output_unresolved=unresolved,
+                build_asset=asset,
+            )
+
+            self.assertFalse(summary["build_pass"])
+            self.assertFalse(summary["reference_procedure_comparison"].get("enabled"))
+
+    def test_reference_comparison_failure_is_reported_in_summary(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            workspace = root / "report"
+            workspace.mkdir()
+            asset = root / "build_asset.sh"
+            main_tex = workspace / "main.tex"
+            procedures = workspace / "procedures.md"
+            discovery = workspace / "discovery.json"
+            reference_md = workspace / "reference.md"
+            summary_json = workspace / "final_qc_summary.json"
+            summary_md = workspace / "final_qc_summary.md"
+            unresolved = workspace / "final_qc_unresolved.md"
+
+            write_build_asset(asset, page_count=24)
+            write_passing_tex(main_tex)
+            write_procedures(procedures)
+            reference_md.write_text("# 电光调制\n\n## 实验步骤\n\n### 观察倍频失真并测量线性工作区\n", encoding="utf-8")
+            write_json(
+                discovery,
+                {
+                    "reference_selection_status": "selected",
+                    "selected_reference_reports": [
+                        {
+                            "pdf_path": str(workspace / "reference.pdf"),
+                            "expected_decoded_markdown_path": str(reference_md),
+                        }
+                    ],
+                },
+            )
+
+            summary = run_finalize_qc(
+                main_tex=main_tex,
+                procedures=procedures,
+                discovery_json=discovery,
+                output_summary_json=summary_json,
+                output_summary_markdown=summary_md,
+                output_unresolved=unresolved,
+                build_asset=asset,
+            )
+
+            self.assertFalse(summary["overall_pass"])
+            self.assertFalse(summary["reference_procedure_comparison_pass"])
+            self.assertIn("recommended_reroutes", summary)
+            self.assertIn("reference procedure", unresolved.read_text(encoding="utf-8").lower())
+
+    def test_none_found_reference_selection_records_neutral_summary(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            workspace = root / "report"
+            workspace.mkdir()
+            asset = root / "build_asset.sh"
+            main_tex = workspace / "main.tex"
+            procedures = workspace / "procedures.md"
+            discovery = workspace / "discovery.json"
+            summary_json = workspace / "final_qc_summary.json"
+            summary_md = workspace / "final_qc_summary.md"
+            unresolved = workspace / "final_qc_unresolved.md"
+
+            write_build_asset(asset, page_count=24)
+            write_passing_tex(main_tex)
+            write_procedures(procedures)
+            write_json(discovery, {"reference_selection_status": "none_found", "selected_reference_reports": []})
+
+            summary = run_finalize_qc(
+                main_tex=main_tex,
+                procedures=procedures,
+                discovery_json=discovery,
+                output_summary_json=summary_json,
+                output_summary_markdown=summary_md,
+                output_unresolved=unresolved,
+                build_asset=asset,
+            )
+
+            self.assertTrue(summary["overall_pass"])
+            self.assertFalse(summary["reference_procedure_comparison_pass"])
+            self.assertFalse(summary["reference_procedure_comparison_blocked"])
+            self.assertEqual(summary["reference_procedure_comparison"]["selection_status"], "none_found")
+
+    def test_ambiguous_reference_selection_reroutes_to_discovery(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            workspace = root / "report"
+            workspace.mkdir()
+            asset = root / "build_asset.sh"
+            main_tex = workspace / "main.tex"
+            procedures = workspace / "procedures.md"
+            discovery = workspace / "discovery.json"
+            summary_json = workspace / "final_qc_summary.json"
+            summary_md = workspace / "final_qc_summary.md"
+            unresolved = workspace / "final_qc_unresolved.md"
+
+            write_build_asset(asset, page_count=24)
+            write_passing_tex(main_tex)
+            write_procedures(procedures)
+            write_json(discovery, {"reference_selection_status": "ambiguous", "selected_reference_reports": []})
+
+            summary = run_finalize_qc(
+                main_tex=main_tex,
+                procedures=procedures,
+                discovery_json=discovery,
+                output_summary_json=summary_json,
+                output_summary_markdown=summary_md,
+                output_unresolved=unresolved,
+                build_asset=asset,
+            )
+
+            self.assertFalse(summary["overall_pass"])
+            self.assertTrue(summary["reference_procedure_comparison_blocked"])
+            self.assertEqual(summary["recommended_reroutes"][0]["target_skill"], "course-lab-discovery")
+
+    def test_declared_unresolved_reference_gap_still_produces_visible_warning(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            workspace = root / "report"
+            workspace.mkdir()
+            asset = root / "build_asset.sh"
+            main_tex = workspace / "main.tex"
+            procedures = workspace / "procedures.md"
+            discovery = workspace / "discovery.json"
+            reference_md = workspace / "reference.md"
+            summary_json = workspace / "final_qc_summary.json"
+            summary_md = workspace / "final_qc_summary.md"
+            unresolved = workspace / "final_qc_unresolved.md"
+
+            write_build_asset(asset, page_count=24)
+            write_procedures(procedures)
+            main_tex.write_text(
+                "\n".join(
+                    [
+                        r"\documentclass[twocolumn]{article}",
+                        r"\usepackage[hidelinks]{hyperref}",
+                        r"\begin{document}",
+                        r"\begin{abstract}",
+                        r"Short abstract.",
+                        r"\end{abstract}",
+                        r"\keywords{optics}",
+                        r"\tableofcontents",
+                        r"\section{Introduction}",
+                        r"P01 is covered here.",
+                        r"\section{实验结果}",
+                        r"\subsection{观察倍频失真并测量线性工作区}",
+                        r"\NeedsInput{Missing waveform data prevents completion of this lane.}",
+                        r"\section{Experiment Discussion}",
+                        r"The result is partially reliable because it is consistent with theory.\cite{opticspaper}",
+                        r"The deviation is mainly caused by instrument uncertainty.",
+                        r"Further improvement would come from repeated measurements.",
+                        r"\end{document}",
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            reference_md.write_text("# 电光调制\n\n## 实验结果\n\n### 观察倍频失真并测量线性工作区\n", encoding="utf-8")
+            write_json(
+                discovery,
+                {
+                    "reference_selection_status": "selected",
+                    "selected_reference_reports": [
+                        {
+                            "pdf_path": str(workspace / "reference.pdf"),
+                            "expected_decoded_markdown_path": str(reference_md),
+                        }
+                    ],
+                },
+            )
+
+            summary = run_finalize_qc(
+                main_tex=main_tex,
+                procedures=procedures,
+                discovery_json=discovery,
+                output_summary_json=summary_json,
+                output_summary_markdown=summary_md,
+                output_unresolved=unresolved,
+                build_asset=asset,
+            )
+
+            self.assertEqual(len(summary["reference_procedure_comparison"]["declared_unresolved_items"]), 1)
+            self.assertIn("warning", unresolved.read_text(encoding="utf-8").lower())
+
+    def test_data_lack_suspected_gap_still_fails_final_qc(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            workspace = root / "report"
+            workspace.mkdir()
+            asset = root / "build_asset.sh"
+            main_tex = workspace / "main.tex"
+            procedures = workspace / "procedures.md"
+            discovery = workspace / "discovery.json"
+            reference_md = workspace / "reference.md"
+            summary_json = workspace / "final_qc_summary.json"
+            summary_md = workspace / "final_qc_summary.md"
+            unresolved = workspace / "final_qc_unresolved.md"
+
+            write_build_asset(asset, page_count=24)
+            write_procedures(procedures)
+            main_tex.write_text(
+                "\n".join(
+                    [
+                        r"\documentclass[twocolumn]{article}",
+                        r"\usepackage[hidelinks]{hyperref}",
+                        r"\begin{document}",
+                        r"\begin{abstract}",
+                        r"Short abstract.",
+                        r"\end{abstract}",
+                        r"\keywords{optics}",
+                        r"\tableofcontents",
+                        r"\section{Introduction}",
+                        r"P01 is covered here.",
+                        r"\section{实验结果}",
+                        r"\subsection{观察倍频失真并测量线性工作区}",
+                        r"由于本次实验没有保存可用的波形数据，这一部分尚不能完成。",
+                        r"\section{Experiment Discussion}",
+                        r"The result is partially reliable because it is consistent with theory.\cite{opticspaper}",
+                        r"The deviation is mainly caused by instrument uncertainty.",
+                        r"Further improvement would come from repeated measurements.",
+                        r"\end{document}",
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            reference_md.write_text("# 电光调制\n\n## 实验结果\n\n### 观察倍频失真并测量线性工作区\n", encoding="utf-8")
+            write_json(
+                discovery,
+                {
+                    "reference_selection_status": "selected",
+                    "selected_reference_reports": [
+                        {
+                            "pdf_path": str(workspace / "reference.pdf"),
+                            "expected_decoded_markdown_path": str(reference_md),
+                        }
+                    ],
+                },
+            )
+
+            summary = run_finalize_qc(
+                main_tex=main_tex,
+                procedures=procedures,
+                discovery_json=discovery,
+                output_summary_json=summary_json,
+                output_summary_markdown=summary_md,
+                output_unresolved=unresolved,
+                build_asset=asset,
+            )
+
+            self.assertFalse(summary["overall_pass"])
+            self.assertEqual(len(summary["reference_procedure_comparison"]["data_lack_suspected_items"]), 1)
+            self.assertIn("warning", unresolved.read_text(encoding="utf-8").lower())
 
 
 if __name__ == "__main__":
