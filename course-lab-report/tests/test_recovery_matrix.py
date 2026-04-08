@@ -64,6 +64,10 @@ class TestRecoveryContractPlaceholder(unittest.TestCase):
             encoding="utf-8"
         )
         expected_snippets = [
+            "selected_reference_reports",
+            "same-experiment reference selection",
+            "declared-unresolved",
+            "data-lack",
             "reroute only approved proposals",
             "confirmed-reference reuse",
             "compute newly required confirmed quantities on rerun",
@@ -80,6 +84,9 @@ class TestRecoveryContractPlaceholder(unittest.TestCase):
             encoding="utf-8"
         )
         expected_snippets = [
+            "reference-procedure comparison",
+            "course-lab-discovery",
+            "course-lab-handout-normalization",
             "controller-state ownership log",
             "last mutating owner",
             "earliest upstream leaf that can safely re-own the broken region",
@@ -100,8 +107,25 @@ class TestRecoveryContractPlaceholder(unittest.TestCase):
             "downstream late-stage reruns",
             "record that fallback in the controller state",
             "unresolved gaps stay visible",
+            "declared-unresolved",
+            "data-lack",
             "sequential repair planning",
             "inline repair",
+        ]
+        for snippet in expected_snippets:
+            with self.subTest(snippet=snippet):
+                self.assertIn(snippet, text)
+
+    def test_parent_skill_mentions_reference_procedure_reroutes(self) -> None:
+        text = (PACKAGE_ROOT / "SKILL.md").read_text(encoding="utf-8")
+        expected_snippets = [
+            "same-experiment reference",
+            "selected_reference_reports",
+            "course-lab-discovery",
+            "course-lab-handout-normalization",
+            "course-lab-results-interpretation",
+            "declared-unresolved",
+            "data-lack",
         ]
         for snippet in expected_snippets:
             with self.subTest(snippet=snippet):

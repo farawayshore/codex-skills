@@ -21,6 +21,18 @@ This matrix turns final QC into a routing checkpoint instead of a terminal step.
 - Route missing theory-stage artifact proof such as `principle_ownership.json`, `principle_figures.json`, `principle_figures.tex`, or `principle_unresolved.md` back to `course-lab-experiment-principle`.
 - Route missing late-stage artifact proof such as `final_staging_summary.json`, `appendix_code_manifest.json`, `picture_evidence_plan.json`, `signatory_pages_manifest.json`, or `signatory_pages.tex` back to the responsible late-stage leaf instead of accepting a manual shortcut.
 
+## Reference-Procedure Comparison Failures
+
+- Treat the discovery-driven reference-procedure comparison as a routing checkpoint, not as a terminal verdict.
+- Route malformed same-experiment reference selection or missing `selected_reference_reports` contract fields back to `course-lab-discovery`.
+- Route selected same-experiment references that still lack decoded Markdown back to `course-lab-handout-normalization`.
+- Route missing reference-procedure heading lanes to `course-lab-body-scaffold`.
+- Route thin staged lane content to `course-lab-final-staging`.
+- Route weak theory/comparison/evidence support inside an existing lane to `course-lab-results-interpretation`.
+- Keep `declared-unresolved` items visible and require their warnings to survive reruns.
+- Treat unmarked `data-lack` items as a failing reroute state until the owning leaf converts them into an explicit visible `TBD` or `\NeedsInput{...}` lane.
+- After any of these reroutes, rerun downstream late-stage leaves and then rerun `course-lab-finalize-qc`.
+
 ## Content Or Support Failures
 
 Use this precedence order:

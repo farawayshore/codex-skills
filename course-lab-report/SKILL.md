@@ -58,11 +58,16 @@ The older `/root/.codex/skills/modern-physics-latex-report-rennovated/` package 
 - Keep artifact handoffs explicit, including the `course-lab-data-processing -> course-lab-final-staging` calculation-details appendix manifest flow.
 - Keep artifact handoffs explicit for optional `course-lab-symbolic-expressing` calls: callers must pass source paths and consume the returned temp TeX path; the parent must not treat this helper as proof that final-staging ran.
 - Keep artifact handoffs explicit, including the `course-lab-final-staging -> course-lab-figure-evidence` comparison-case handoff needed for same-case experiment-versus-simulation figure placement.
+- Keep artifact handoffs explicit for the discovery-driven same-experiment reference comparison path: the parent must treat `selected_reference_reports` plus `reference_selection_status` as the only accepted finalize-QC reference-selection contract.
 - The parent must not silently continue past `course-lab-experiment-principle` without explicit principle-stage artifact proof.
 - The parent must not treat manually written theory prose as proof that principle-image staging ran.
 - The parent must not hand-write a manual short draft once the run has progressed past setup and planning; late report mutation must remain owned by `course-lab-experiment-principle`, `course-lab-final-staging`, and `course-lab-figure-evidence`.
 - The parent must not bypass `course-lab-final-staging` once late-stage report assembly is in scope.
 - The parent must not replace missing appendix staging with a prose-only appendix stub.
+- The parent must route malformed same-experiment reference selection back to `course-lab-discovery` instead of letting final QC guess.
+- The parent must route missing decoded Markdown for selected same-experiment references back to `course-lab-handout-normalization`.
+- The parent must route weak interpretation-only reference-procedure gaps to `course-lab-results-interpretation` instead of flattening them into generic staging reruns.
+- The parent must preserve declared-unresolved and data-lack states explicitly after reference-procedure comparison so the final handoff stays honest about remaining gaps.
 
 ## Theory-Stage Completion Gate
 

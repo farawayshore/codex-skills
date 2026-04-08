@@ -4,8 +4,10 @@
 - Invoke when: the run needs confirmed source candidates before any mutation.
 - Required inputs: course name, experiment query, repo layout.
 - Emits: confirmed experiment target, handout/reference/template/result-folder selections.
+- Emits: `selected_reference_reports` and `reference_selection_status` for same-experiment reference selection when final QC will compare against reference procedures.
 - Delegation preference: Prefer Inline / Main Agent.
 - QC reroute ownership: weak discovery confirmation or wrong upstream selection.
+- QC reroute ownership: malformed same-experiment reference selection or ambiguous finalize-QC reference bundle.
 - Does not own: decoding, workspace mutation, report drafting.
 
 ## course-lab-handout-normalization
@@ -15,6 +17,7 @@
 - Emits: normalized section JSON and Markdown.
 - Delegation preference: Prefer Small Worker.
 - QC reroute ownership: missing persistent decoded handout artifacts or malformed normalized handout structure.
+- QC reroute ownership: selected same-experiment reference reports that still lack decoded Markdown for the finalize-QC detector.
 - Does not own: workspace setup, later prose writing.
 
 ## course-lab-workspace-template
@@ -100,6 +103,7 @@
 - Emits: interpretation JSON, Markdown, unresolved support gaps, and `agent_proposed_key_results` when new important results are found.
 - Delegation preference: Prefer Inline / Main Agent.
 - QC reroute ownership: missing, weak, contradictory, or insufficiently structured evidence support.
+- QC reroute ownership: same-experiment reference-procedure lanes whose headings exist in the report but whose theory, comparison, or evidence support is still weak.
 - Does not own: final discussion harmonization, figure placement, compile/QC.
 - Does not own: official plan promotion or confirmed-reference reuse by itself.
 
@@ -128,6 +132,7 @@
 - Emits: confirmed literature-reference summaries for downstream confirmed-reference reuse without re-searching.
 - Delegation preference: Explicit Stay-Local.
 - QC reroute ownership: thin staged prose, missing mathematical procedures, weak case coverage, page-count shortfall.
+- QC reroute ownership: reference-procedure lanes that exist but remain too thin, plus `declared-unresolved` and `data-lack` follow-up when the report still needs a visible late-stage marker.
 - Does not own: figure placement, compile loop, direct final QC.
 - Does not own: literature search, proposal confirmation, or post hoc scope growth.
 - Reroute note: consume confirmed comparison artifacts and confirmed references only after the parent reroute only approved proposals.
@@ -146,7 +151,9 @@
 ## course-lab-finalize-qc
 - Invoke when: the figure-complete draft needs compile, QC, page-count checks, and handoff reporting.
 - Required inputs: canonical `main.tex`, figure-complete draft, optional evidence-plan and QC-side artifacts.
+- Required inputs: discovery-produced `selected_reference_reports` plus `reference_selection_status` when same-experiment reference comparison is enabled.
 - Emits: final QC summary JSON, Markdown, unresolved report, and status outputs.
+- Emits: reference-procedure comparison status, parent-facing reroutes, `declared-unresolved` notes, and `data-lack` warnings when the detector finds them.
 - Delegation preference: Prefer Inline / Main Agent.
 - QC reroute ownership: diagnostic ownership only; it reports failures and warnings for the parent to route.
 - Does not own: report prose repair, figure staging, data processing.
