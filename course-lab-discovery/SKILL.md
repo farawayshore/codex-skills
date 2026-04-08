@@ -15,6 +15,9 @@ Use the model to derive bilingual search topics at run time. The Python script s
 
 - Use local `scripts/discover_sources.py` as the canonical discovery contract.
 - Produce a ranked view of handouts, decoded JSON, references, complete data-file discovery, data groups, simulation directories, simulation files, picture-result directories, picture-result files, signatory files, result directories, language-grouped templates, excluded templates, and warnings.
+- Surface all strong same-experiment reference reports through `selected_reference_reports` instead of hiding them behind the ranked shortlist.
+- Emit `reference_selection_status` as `selected`, `ambiguous`, or `none_found` so downstream steps can distinguish a confident same-experiment bundle from discovery uncertainty.
+- Predict canonical sibling `pdf_markdown` and `pdf_decoded` paths for each selected reference report.
 - Translate the experiment topic into English and Chinese with the model, run discovery for each query independently, then compare the result sets.
 - Confirm the experiment target and show template options before any later skill mutates files.
 - If the top matches are weak, tied, or zero-score, keep that uncertainty visible and ask the user instead of choosing silently.
@@ -70,6 +73,7 @@ If the report language is already known, pass `--template-language english` or `
 ## Boundary Rules
 
 - This skill discovers and confirms sources. It does not decode PDFs, create workspaces, edit TeX, or draft report prose.
+- This skill discovers and confirms same-experiment reference report paths, but it does not decode those references itself.
 - Do not hardcode translation aliases inside the Python scorer. Topic translation belongs to the model-driven workflow above.
 - Treat simulation discovery as query-specific. If no simulation candidate seems relevant, return `"not exist"` instead of a low-score guess.
 - Do not reuse a single generic discovery manifest filename across different experiments. Saved discovery JSON should be experiment-specific.

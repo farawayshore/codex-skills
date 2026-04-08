@@ -20,6 +20,7 @@ from common import (
     ScoredPath,
     expand_query_variants,
     iter_files,
+    match_tokens,
     normalize_for_match,
     path_match_texts,
     score_query_variants,
@@ -37,6 +38,17 @@ DATA_TABLE_SUFFIXES = {".csv", ".tsv", ".xls", ".xlsx"}
 DATA_SCAN_SUFFIXES = {".pdf", ".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp"}
 SIMULATION_FILE_SUFFIXES = {".py", ".wl", ".m", ".mlx", ".ipynb"}
 SIMULATION_HINTS = ("simulation", "simulations", "simulator", "mathematica", "matlab", "simulink", "wolfram")
+REFERENCE_PROCEDURE_SECTION_CANDIDATES = [
+    "Experiment Steps",
+    "Experimental Procedure",
+    "Experiment Procedure",
+    "Procedure",
+    "Experiment Results",
+    "实验步骤",
+    "实验过程",
+    "实验方法",
+    "实验结果",
+]
 
 
 def parent_dirs_for_files(files: list[Path], root: Path) -> list[Path]:
@@ -98,10 +110,83 @@ def top_or_all(scored: list[ScoredPath], max_results: int) -> list[dict[str, obj
     return [item.to_dict() for item in filtered[:max_results]]
 
 
+def expected_reference_markdown_path(pdf_path: Path) -> Path:
+    return pdf_path.parent / "pdf_markdown" / pdf_path.stem / f"{pdf_path.stem}.md"
+
+
+def expected_reference_json_path(pdf_path: Path) -> Path:
+    return pdf_path.parent / "pdf_decoded" / pdf_path.stem / f"{pdf_path.stem}.json"
+
+
 def parse_detail_value(detail: str, prefix: str) -> str | None:
     if not detail.startswith(prefix):
         return None
     return detail.split(":", 1)[1]
+
+
+def is_substantive_reference_match(item: ScoredPath) -> bool:
+    detail_set = set(item.details)
+    return (
+        "exact-match" in detail_set
+        or "contains-query" in detail_set
+        or any(detail.startswith("token-overlap:") for detail in detail_set)
+    )
+
+
+def same_reference_cluster(scored: list[ScoredPath]) -> list[ScoredPath]:
+    strong = [item for item in scored if is_substantive_reference_match(item)]
+    if not strong:
+        return []
+
+    best = strong[0]
+    best_label = normalize_for_match(best.label)
+    best_tokens = set(match_tokens(best.label))
+    clustered: list[ScoredPath] = []
+    for item in strong:
+        item_label = normalize_for_match(item.label)
+        item_tokens = set(match_tokens(item.label))
+        shared_tokens = best_tokens & item_tokens
+        if shared_tokens or best_label in item_label or item_label in best_label:
+            clustered.append(item)
+    return clustered
+
+
+def reference_selection_payload(query: str) -> dict[str, object]:
+    references = list(iter_files(REFERENCE_LIBRARY_ROOT, suffixes=PDF_SUFFIXES, exclude_parts={"pdf_decoded", "pdf_markdown"}))
+    scored = score_paths(query, references, library_root=REFERENCE_LIBRARY_ROOT)
+    strong = same_reference_cluster(scored)
+    if strong:
+        selected = []
+        for item in strong:
+            pdf_path = Path(item.path)
+            markdown_path = expected_reference_markdown_path(pdf_path)
+            json_path = expected_reference_json_path(pdf_path)
+            selected.append(
+                {
+                    "pdf_path": item.path,
+                    "experiment_match_label": item.label,
+                    "match_score": round(item.score, 3),
+                    "selection_reason": item.details,
+                    "expected_decoded_markdown_path": str(markdown_path),
+                    "expected_decoded_json_path": str(json_path),
+                    "current_decoded_markdown_exists": markdown_path.exists(),
+                    "current_decoded_json_exists": json_path.exists(),
+                    "procedure_section_candidates": REFERENCE_PROCEDURE_SECTION_CANDIDATES,
+                }
+            )
+        return {
+            "reference_selection_status": "selected",
+            "selected_reference_reports": selected,
+        }
+    if any(item.score > 0 for item in scored):
+        return {
+            "reference_selection_status": "ambiguous",
+            "selected_reference_reports": [],
+        }
+    return {
+        "reference_selection_status": "none_found",
+        "selected_reference_reports": [],
+    }
 
 
 def is_substantive_simulation_match(item: ScoredPath) -> bool:
@@ -479,6 +564,7 @@ def main() -> int:
     picture_result_files = list(iter_files(PIC_RESULT_ROOT, suffixes=PIC_RESULT_SUFFIXES)) if PIC_RESULT_ROOT.exists() else []
     signatory_files = list(iter_files(SIGNATORY_ROOT, suffixes=PDF_SUFFIXES | IMAGE_SUFFIXES)) if SIGNATORY_ROOT.exists() else []
     templates, excluded_templates = template_groups(args.template_language)
+    reference_selection = reference_selection_payload(query_text)
 
     warnings: list[str] = []
     if not SIGNATORY_ROOT.exists():
@@ -511,6 +597,7 @@ def main() -> int:
             score_paths(query_text, references, library_root=REFERENCE_LIBRARY_ROOT),
             args.max_results,
         ),
+        **reference_selection,
         "reference_decoded_json": decoded_candidates(REFERENCE_LIBRARY_ROOT, query_text, args.max_results),
         "data_files": ranked_data_files,
         "data_groups": data_groups,

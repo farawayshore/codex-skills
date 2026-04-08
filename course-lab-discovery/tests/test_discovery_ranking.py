@@ -14,9 +14,11 @@ from discover_sources import (  # noqa: E402
     data_candidates,
     decoded_candidates,
     picture_result_dir_candidates,
+    reference_selection_payload,
     score_paths,
     simulation_dir_candidates,
     simulation_file_candidates,
+    top_or_all,
     template_groups,
 )
 
@@ -119,6 +121,110 @@ class DiscoveryRankingTests(unittest.TestCase):
 
         self.assertEqual(Path(ranked[0].path).name, "272842_sysut_23355030 贾儒恺 晶体光学.pdf")
         self.assertGreater(ranked[0].score, ranked[1].score)
+
+    def test_selected_reference_reports_include_all_strong_same_experiment_matches(self) -> None:
+        temp_root = Path(tempfile.mkdtemp())
+        course_root = temp_root / "Modern Physics Experiments"
+        course_root.mkdir(parents=True)
+        for name in (
+            "279964_sysut_23355030 A 电光调制.pdf",
+            "300001_sysut_23355030 B 电光调制.pdf",
+            "23355030贾儒恺_光泵磁共振.pdf",
+        ):
+            (course_root / name).write_text("% pdf\n", encoding="utf-8")
+
+        self.addCleanup(lambda: __import__("shutil").rmtree(temp_root))
+
+        with mock.patch("discover_sources.REFERENCE_LIBRARY_ROOT", temp_root):
+            payload = reference_selection_payload("现代物理实验 电光调制")
+
+        self.assertEqual(payload["reference_selection_status"], "selected")
+        selected = payload["selected_reference_reports"]
+        self.assertEqual(len(selected), 2)
+        self.assertTrue(all(item["pdf_path"].endswith(".pdf") for item in selected))
+        self.assertTrue(all("电光调制" in Path(item["pdf_path"]).name for item in selected))
+
+    def test_reference_selection_status_distinguishes_ambiguous_from_none_found(self) -> None:
+        temp_root = Path(tempfile.mkdtemp())
+        course_root = temp_root / "Modern Physics Experiments"
+        course_root.mkdir(parents=True)
+        (course_root / "vague optics note.pdf").write_text("% pdf\n", encoding="utf-8")
+
+        self.addCleanup(lambda: __import__("shutil").rmtree(temp_root))
+
+        with mock.patch("discover_sources.REFERENCE_LIBRARY_ROOT", temp_root):
+            payload = reference_selection_payload("Electro-Optic Modulation")
+
+        self.assertIn(payload["reference_selection_status"], {"ambiguous", "none_found"})
+        self.assertEqual(payload["selected_reference_reports"], [])
+
+    def test_selected_reference_reports_expose_expected_decode_paths(self) -> None:
+        temp_root = Path(tempfile.mkdtemp())
+        course_root = temp_root / "Modern Physics Experiments"
+        course_root.mkdir(parents=True)
+        pdf_path = course_root / "279964_sysut_23355030 A 电光调制.pdf"
+        pdf_path.write_text("% pdf\n", encoding="utf-8")
+
+        self.addCleanup(lambda: __import__("shutil").rmtree(temp_root))
+
+        with mock.patch("discover_sources.REFERENCE_LIBRARY_ROOT", temp_root):
+            payload = reference_selection_payload("电光调制")
+
+        item = payload["selected_reference_reports"][0]
+        self.assertTrue(item["expected_decoded_markdown_path"].endswith(".md"))
+        self.assertTrue(item["expected_decoded_json_path"].endswith(".json"))
+        self.assertIn("pdf_markdown", item["expected_decoded_markdown_path"])
+        self.assertIn("pdf_decoded", item["expected_decoded_json_path"])
+
+    def test_selected_reference_reports_are_not_truncated_by_max_results(self) -> None:
+        temp_root = Path(tempfile.mkdtemp())
+        course_root = temp_root / "Modern Physics Experiments"
+        course_root.mkdir(parents=True)
+        for name in (
+            "279964_sysut_23355030 A 电光调制.pdf",
+            "300001_sysut_23355030 B 电光调制.pdf",
+            "300002_sysut_23355030 C 电光调制.pdf",
+        ):
+            (course_root / name).write_text("% pdf\n", encoding="utf-8")
+
+        self.addCleanup(lambda: __import__("shutil").rmtree(temp_root))
+
+        with mock.patch("discover_sources.REFERENCE_LIBRARY_ROOT", temp_root):
+            ranked = top_or_all(
+                score_paths(
+                    "电光调制",
+                    list(course_root.glob("*.pdf")),
+                    library_root=temp_root,
+                ),
+                1,
+            )
+            payload = reference_selection_payload("电光调制")
+
+        self.assertEqual(len(ranked), 1)
+        self.assertEqual(payload["reference_selection_status"], "selected")
+        self.assertEqual(len(payload["selected_reference_reports"]), 3)
+
+    def test_selected_reference_reports_exclude_weak_unrelated_candidates(self) -> None:
+        temp_root = Path(tempfile.mkdtemp())
+        course_root = temp_root / "Modern Physics Experiments"
+        course_root.mkdir(parents=True)
+        for name in (
+            "279964_sysut_23355030 A 电光调制.pdf",
+            "300001_sysut_23355030 B 电光调制.pdf",
+            "optics modulation note 光学调制综述.pdf",
+        ):
+            (course_root / name).write_text("% pdf\n", encoding="utf-8")
+
+        self.addCleanup(lambda: __import__("shutil").rmtree(temp_root))
+
+        with mock.patch("discover_sources.REFERENCE_LIBRARY_ROOT", temp_root):
+            payload = reference_selection_payload("电光调制")
+
+        selected_names = {Path(item["pdf_path"]).name for item in payload["selected_reference_reports"]}
+        self.assertEqual(payload["reference_selection_status"], "selected")
+        self.assertIn("279964_sysut_23355030 A 电光调制.pdf", selected_names)
+        self.assertIn("300001_sysut_23355030 B 电光调制.pdf", selected_names)
+        self.assertNotIn("optics modulation note 光学调制综述.pdf", selected_names)
 
     def test_picture_result_directory_prefers_experiment_named_folder(self) -> None:
         ranked = picture_result_dir_candidates("crystal optics", 5)
