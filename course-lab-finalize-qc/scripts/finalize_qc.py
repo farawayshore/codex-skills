@@ -140,6 +140,7 @@ def run_local_report_qc(
     procedures: Path,
     evidence_plan: Path | None,
     discussion_candidates: Path | None,
+    body_scaffold: Path | None,
     workspace: Path,
 ) -> tuple[bool, dict[str, object], str, str]:
     temp_markdown = workspace / ".finalize_qc_report_qc.md"
@@ -160,6 +161,8 @@ def run_local_report_qc(
         args.extend(["--evidence-plan", str(evidence_plan)])
     if discussion_candidates:
         args.extend(["--discussion-candidates", str(discussion_candidates)])
+    if body_scaffold:
+        args.extend(["--body-scaffold", str(body_scaffold)])
 
     result = run_command(args, workspace)
     summary = read_json(temp_json)
@@ -194,6 +197,7 @@ def run_finalize_qc(
 ) -> dict[str, object]:
     workspace = main_tex.resolve().parent
     build_path = workspace / "build.sh"
+    body_scaffold = workspace / "body_scaffold.json"
     build_script_status = "unchanged"
     if not build_path.exists():
         copy_if_needed(build_asset, build_path)
@@ -218,6 +222,7 @@ def run_finalize_qc(
             procedures=procedures,
             evidence_plan=evidence_plan,
             discussion_candidates=discussion_candidates,
+            body_scaffold=body_scaffold if body_scaffold.exists() else None,
             workspace=workspace,
         )
         if build_layout_issues:
@@ -241,7 +246,22 @@ def run_finalize_qc(
         "recommended_reroutes": [],
     }
 
+    required_paths = [
+        workspace / "principle_ownership.json",
+        workspace / "final_staging_summary.json",
+        workspace / "appendix_code_manifest.json",
+        workspace / "picture_evidence_plan.json",
+    ]
+    missing_required = [path.name for path in required_paths if not path.exists()]
+
+    principle_has_figures = (workspace / "principle_figures.json").exists() and (workspace / "principle_figures.tex").exists()
+    principle_is_unresolved = (workspace / "principle_unresolved.md").exists()
+    if not principle_has_figures and not principle_is_unresolved:
+        missing_required.extend(["principle_figures.json", "principle_figures.tex or principle_unresolved.md"])
+
     unresolved_items: list[str] = []
+    for item in missing_required:
+        unresolved_items.append(f"Required workflow artifact is missing: {item}")
     if build_result.returncode != 0:
         unresolved_items.append("Compile failed. Inspect the captured build stdout and stderr before rerunning final QC.")
     if build_result.returncode == 0 and not pdf_exists:
@@ -269,7 +289,7 @@ def run_finalize_qc(
             f"Compiled PDF page count is {pdf_page_count}, outside the preferred {PAGE_WARN_MIN}-{PAGE_WARN_MAX} page band. This is a warning, not a hard failure."
         )
 
-    overall_pass = build_result.returncode == 0 and pdf_exists and qc_pass and pdf_size_ok
+    overall_pass = build_result.returncode == 0 and pdf_exists and qc_pass and pdf_size_ok and not missing_required
     if discovery_json and build_result.returncode == 0 and pdf_exists and qc_pass and pdf_size_ok and not build_layout_issues:
         comparison_summary = compare_reference_procedure_coverage(main_tex=main_tex, discovery_json=discovery_json)
         if (
@@ -287,7 +307,7 @@ def run_finalize_qc(
             unresolved_items.append("Reference procedure comparison warning: unresolved data-lack lanes still need an explicit visible TBD or NeedsInput marker.")
         if comparison_summary["declared_unresolved_items"]:
             unresolved_items.append("Reference procedure comparison warning: declared unresolved lanes remain visible in the report and should stay visible in the final handoff.")
-        if not comparison_summary["pass"]:
+        if comparison_summary["enabled"] and not comparison_summary["pass"]:
             unresolved_items.append("Reference procedure comparison produced parent-facing reroutes that must be handled before completion.")
 
     summary: dict[str, object] = {
@@ -314,6 +334,7 @@ def run_finalize_qc(
         "reference_procedure_comparison_blocked": comparison_summary["blocked"],
         "reference_procedure_comparison": comparison_summary,
         "recommended_reroutes": comparison_summary["recommended_reroutes"],
+        "missing_required_artifacts": missing_required,
         "overall_pass": overall_pass,
         "unresolved_items": unresolved_items,
     }

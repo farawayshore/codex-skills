@@ -17,7 +17,7 @@ HEADING_PATTERNS = {
     "equipment": re.compile(r"(实验仪器|实验设备|仪器设备|equipment|apparatus|materials)", re.IGNORECASE),
     "principle": re.compile(r"(实验原理|实验理论|原理|principle|theory)", re.IGNORECASE),
     "steps": re.compile(r"(实验步骤|实验方法|实验内容|操作步骤|procedure|steps?|method)", re.IGNORECASE),
-    "thinking_questions": re.compile(r"(思考题|讨论题|thinking questions?)", re.IGNORECASE),
+    "thinking_questions": re.compile(r"(思考(?:题|与讨论)|讨论题|thinking questions?)", re.IGNORECASE),
     "appendix": re.compile(r"(附录|appendix)", re.IGNORECASE),
     "references": re.compile(r"(参考文献|references?)", re.IGNORECASE),
 }

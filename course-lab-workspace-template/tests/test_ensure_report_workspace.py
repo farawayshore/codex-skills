@@ -110,6 +110,88 @@ class EnsureReportWorkspaceTests(unittest.TestCase):
             self.assertEqual(payload["template_entry"], str(template))
             self.assertEqual(payload["copied_companion_assets"], [])
 
+    def test_stock_tau_template_is_normalized_into_skill_owned_scaffold(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_name:
+            root = Path(temp_name)
+            template = root / "AI_works" / "resources" / "latex_templet" / "english" / "tau_templet copy.tex"
+            template.parent.mkdir(parents=True, exist_ok=True)
+            template.write_text(
+                r"""
+\documentclass{article}
+\begin{document}
+\section{Introduction}
+Briefly introduce the physical phenomenon, the scientific background, and the practical value of the experiment.
+
+\section{Experiment Purpose}
+\begin{itemize}
+  \item State the main physical quantity or phenomenon to be measured or verified.
+\end{itemize}
+
+\section{Experiment Principle}
+\subsection{Physical Background}
+Explain the core theory, define the main variables, and describe the mechanism behind the measurement.
+
+\subsection{Key Equations}
+Replace the example formulas below with the equations for your own experiment.
+
+\subsection{Expected Observations}
+Describe the qualitative features you expect to observe.
+
+\section{Experiment Steps}
+\begin{enumerate}
+  \item Perform the safety check and instrument warm-up.
+\end{enumerate}
+
+\section{Experiment Process and Results}
+Present the original measurements clearly.
+
+\section{Experiment Discussion}
+Interpret whether the results support the theory.
+
+% Uncomment the next lines if you need appendices.
+% \appendix
+% \section{Appendix}
+% Put supplementary derivations, extra tables, or code here.
+\end{document}
+""".strip()
+                + "\n",
+                encoding="utf-8",
+            )
+            results_root = root / "results"
+            output_json = root / "workspace.json"
+
+            subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPT_PATH),
+                    "--experiment",
+                    "Electro-Optic Modulation",
+                    "--mode",
+                    "new",
+                    "--template",
+                    str(template),
+                    "--results-root",
+                    str(results_root),
+                    "--output-json",
+                    str(output_json),
+                ],
+                check=True,
+            )
+
+            payload = json.loads(output_json.read_text(encoding="utf-8"))
+            main_tex = Path(payload["canonical_tex"]).read_text(encoding="utf-8")
+
+            self.assertIn(r"\section{Objectives}", main_tex)
+            self.assertNotIn(r"\section{Experiment Purpose}", main_tex)
+            self.assertIn(r"\section{Experimental Procedure and Observations}", main_tex)
+            self.assertNotIn(r"\section{Experiment Steps}", main_tex)
+            self.assertIn(r"\section{Results and Analysis}", main_tex)
+            self.assertNotIn(r"\section{Experiment Process and Results}", main_tex)
+            self.assertGreaterEqual(main_tex.count(r"% course-lab-final-staging:allow-overwrite"), 3)
+            self.assertIn(r"\appendix", main_tex)
+            self.assertIn(r"\section{Appendix}", main_tex)
+            self.assertIn(r"\NeedsInput{", main_tex)
+
     def test_bundle_template_rewrite_copies_assets_and_records_manifest(self) -> None:
         with tempfile.TemporaryDirectory() as temp_name:
             root = Path(temp_name)

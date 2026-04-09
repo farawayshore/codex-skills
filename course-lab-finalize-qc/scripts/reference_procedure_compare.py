@@ -248,9 +248,9 @@ def compare_reference_procedure_coverage(*, main_tex: Path, discovery_json: Path
 
     if selection_status == "none_found":
         return {
-            "enabled": True,
+            "enabled": False,
             "selection_status": "none_found",
-            "pass": False,
+            "pass": True,
             "blocked": False,
             "blocked_reference_decode_items": [],
             "missing_structure_items": [],
@@ -293,6 +293,14 @@ def compare_reference_procedure_coverage(*, main_tex: Path, discovery_json: Path
     reference_items: list[dict[str, object]] = []
     for entry in selected:
         if not isinstance(entry, dict):
+            blocked_reference_decode_items.append(
+                {
+                    "target_skill": "course-lab-discovery",
+                    "reason_code": "malformed-discovery-contract",
+                    "reason_summary": "A selected reference entry must preserve pdf_path and expected decode paths.",
+                    "source_reference": str(entry),
+                }
+            )
             continue
         source_reference = str(entry.get("pdf_path") or "")
         markdown_path = entry.get("expected_decoded_markdown_path")

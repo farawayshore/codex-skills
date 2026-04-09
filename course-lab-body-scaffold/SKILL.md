@@ -24,7 +24,7 @@ Do not use this skill to choose the experiment, decode PDFs, transfer data, comp
 ## Output Contract
 
 - Use local `scripts/build_body_scaffold.py` as the canonical scaffold-building tool.
-- Feed it normalized section JSON from `course-lab-handout-normalization` plus the current template TeX.
+- Feed it workspace-local normalized section JSON from `course-lab-handout-normalization` at `/path/to/results/<experiment>/notes/sections.json`, plus the companion Markdown at `/path/to/results/<experiment>/notes/sections.md` when human review is needed, and the current template TeX.
 - Produce four local artifacts:
   - scaffold JSON
   - scaffold Markdown summary
@@ -38,7 +38,7 @@ Do not use this skill to choose the experiment, decode PDFs, transfer data, comp
 
 ```bash
 python3 /root/.codex/skills/course-lab-body-scaffold/scripts/build_body_scaffold.py \
-  --sections-json "/path/to/results/<experiment>/sections.json" \
+  --sections-json "/path/to/results/<experiment>/notes/sections.json" \
   --template-tex "/path/to/results/<experiment>/main.tex" \
   --output-json "/path/to/results/<experiment>/body_scaffold.json" \
   --output-markdown "/path/to/results/<experiment>/body_scaffold.md" \

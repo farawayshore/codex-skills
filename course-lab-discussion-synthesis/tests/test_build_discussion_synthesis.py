@@ -250,6 +250,31 @@ class BuildDiscussionSynthesisTests(unittest.TestCase):
             self.assertIn("approved", combined)
             self.assertIn("approval", combined)
 
+    def test_synthesis_judgment_input_from_discussion_ideas_is_accepted(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_name:
+            fixture = self.prepare_fixture(Path(temp_name), approval_status="pending")
+            write_json(
+                fixture["synthesis_input_json"],
+                {
+                    "candidate_count": 1,
+                    "approval_mode": "synthesis_judgment",
+                    "discussion_ideas": [
+                        {
+                            "idea_id": "wave-speed-interpretation",
+                            "title": "Wave speed interpretation",
+                            "confidence_level": "medium",
+                            "approval_status": "pending_synthesis_judgment",
+                            "reusable_snippet": "Wave-speed agreement likely indicates good control.",
+                            "reference_report_support": ["Reference Report A"],
+                        }
+                    ],
+                },
+            )
+
+            completed = self.run_builder(fixture)
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+
     def test_missing_reference_report_fails_with_clear_contract_message(self) -> None:
         with tempfile.TemporaryDirectory() as temp_name:
             fixture = self.prepare_fixture(Path(temp_name))

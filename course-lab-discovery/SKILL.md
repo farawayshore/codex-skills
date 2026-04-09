@@ -17,7 +17,11 @@ Use the model to derive bilingual search topics at run time. The Python script s
 - Produce a ranked view of handouts, decoded JSON, references, complete data-file discovery, data groups, simulation directories, simulation files, picture-result directories, picture-result files, signatory files, result directories, language-grouped templates, excluded templates, and warnings.
 - Surface all strong same-experiment reference reports through `selected_reference_reports` instead of hiding them behind the ranked shortlist.
 - Emit `reference_selection_status` as `selected`, `ambiguous`, or `none_found` so downstream steps can distinguish a confident same-experiment bundle from discovery uncertainty.
-- Predict canonical sibling `pdf_markdown` and `pdf_decoded` paths for each selected reference report.
+- Each `selected_reference_reports` entry must preserve the full dict contract:
+  - `pdf_path`
+  - `expected_decoded_markdown_path`
+  - `expected_decoded_json_path`
+- Predict canonical sibling decode paths for each selected reference report and store them under `expected_decoded_markdown_path` plus `expected_decoded_json_path`.
 - Translate the experiment topic into English and Chinese with the model, run discovery for each query independently, then compare the result sets.
 - Confirm the experiment target and show template options before any later skill mutates files.
 - If the top matches are weak, tied, or zero-score, keep that uncertainty visible and ask the user instead of choosing silently.
@@ -50,6 +54,7 @@ If the report language is already known, pass `--template-language english` or `
 8. For bundle templates, use the bundle label and `template_root` plus `template_entry`; do not present a bare `main.tex` choice.
 9. Surface result-folder state: whether a likely result directory exists, which `.tex` files it has, and whether `main.tex` is present.
 10. Present valid template candidates outside `dont use`, then confirm the experiment target before invoking `course-lab-handout-normalization` or `course-lab-workspace-template`.
+11. If a human or parent workflow manually promotes selected references, preserve the full dict entry; manual promotion must not collapse `selected_reference_reports` to plain strings.
 
 ## Quick Reference
 
@@ -74,6 +79,7 @@ If the report language is already known, pass `--template-language english` or `
 
 - This skill discovers and confirms sources. It does not decode PDFs, create workspaces, edit TeX, or draft report prose.
 - This skill discovers and confirms same-experiment reference report paths, but it does not decode those references itself.
+- Discovery owns the selected-reference bundle shape. Downstream steps must treat plain strings as malformed and reroute instead of guessing missing decode metadata.
 - Do not hardcode translation aliases inside the Python scorer. Topic translation belongs to the model-driven workflow above.
 - Treat simulation discovery as query-specific. If no simulation candidate seems relevant, return `"not exist"` instead of a low-score guess.
 - Do not reuse a single generic discovery manifest filename across different experiments. Saved discovery JSON should be experiment-specific.

@@ -65,6 +65,15 @@ class TestCourseLabHandoutNormalizationPackage(unittest.TestCase):
             "skill must explicitly ban pdftotext",
         )
 
+    def test_skill_requires_selected_reference_reroute_and_workspace_notes_sections(self) -> None:
+        skill_text = (PACKAGE_ROOT / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("selected same-experiment references", skill_text)
+        self.assertIn("expected_decoded_markdown_path", skill_text)
+        self.assertIn("expected_decoded_json_path", skill_text)
+        self.assertIn("course-lab-discovery", skill_text)
+        self.assertIn("/path/to/results/<experiment>/notes/sections.json", skill_text)
+        self.assertIn("/path/to/results/<experiment>/notes/sections.md", skill_text)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,4 +1,4 @@
 interface:
   display_name: "Course Lab Discussion Synthesis"
   short_description: "Turn approved discussion ideas into artifact-only final-staging handoff outputs"
-  default_prompt: "Use $course-lab-discussion-synthesis only after approved discussion handoff artifacts and parent-passed reference report paths already exist, rely on the local copied scripts in this folder, treat the first accepted-ideas run as one bounded enrichment pass, use targeted gap fill only when later reruns still have weak support, emit artifact-only final-staging handoff outputs, and do not mutate main.tex or the report directly."
+  default_prompt: "Use $course-lab-discussion-synthesis only after discussion handoff artifacts and parent-passed reference report paths already exist, rely on the local copied scripts in this folder, accept approved inputs or a synthesis_judgment handoff whose canonical list is discussion_ideas, treat the first accepted-ideas run as one bounded enrichment pass, use targeted gap fill only when later reruns still have weak support, emit artifact-only final-staging handoff outputs, and do not mutate main.tex or the report directly."

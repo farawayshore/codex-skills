@@ -55,7 +55,7 @@ Do not use this skill to transcribe raw data, compute new derived quantities, ru
 ```bash
 python3 /root/.codex/skills/course-lab-results-interpretation/scripts/build_results_interpretation.py \
   --handout-sections-markdown "/path/to/results/<experiment>/notes/sections.md" \
-  --handout-sections-json "/path/to/results/<experiment>/sections.json" \
+  --handout-sections-json "/path/to/results/<experiment>/notes/sections.json" \
   --processed-data-json "/path/to/results/<experiment>/analysis/processed_data.json" \
   --processed-data-markdown "/path/to/results/<experiment>/analysis/processed_data.md" \
   --plots-manifest "/path/to/plottings/plot_manifest.json" \
@@ -73,7 +73,7 @@ Reference staging helper before the interpretation pass:
 ```bash
 python3 /root/.codex/skills/course-lab-results-interpretation/scripts/stage_reference_values.py \
   --handout-sections-markdown "/path/to/results/<experiment>/notes/sections.md" \
-  --handout-sections-json "/path/to/results/<experiment>/sections.json" \
+  --handout-sections-json "/path/to/results/<experiment>/notes/sections.json" \
   --processed-data-json "/path/to/results/<experiment>/analysis/processed_data.json" \
   --seed-references-json "/path/to/results/<experiment>/analysis/reference_seed_values.json" \
   --search-spec-json "/path/to/results/<experiment>/analysis/reference_search_spec.json" \

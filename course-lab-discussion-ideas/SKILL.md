@@ -18,6 +18,7 @@ This skill is standalone with local copied tools. It should read stable interpre
 - Matched reference report paths have already been selected by the parent workflow.
 - The run needs beyond-handout discussion ideas before `course-lab-discussion-synthesis`.
 - The workflow needs reusable snippets and handoff artifacts for synthesis judgment, not final harmonized discussion prose.
+- When the parent records `reference_selection_status: none_found`, this lane is optional and the skip should be recorded in `skipped_optional_leaves` instead of treated as a failure.
 
 Do not use this skill to discover reference reports, run modeling jobs, mutate `main.tex`, ask for a direct approval prompt on discussion ideas, or write the final harmonized discussion section.
 
@@ -41,7 +42,9 @@ Do not treat these as discussion ideas here:
 - Skip broad first-pass browsing when permanent memory already exists for the experiment.
 - Always run targeted refinement for retained novelty candidates and allow one or two targeted rounds.
 - A successful run may keep zero discussion ideas if no non-routine direction is justified by the evidence.
+- Treat `discussion_ideas` as the canonical idea list in both `discussion_ideas.json` and `discussion_synthesis_input.tmp.json`.
 - Write per-idea approval state such as `pending_synthesis_judgment` into `discussion_synthesis_input.tmp.*` so `course-lab-discussion-synthesis` can judge what to keep.
+- When reference selection produced `none_found`, keep the zero-idea lane explicit and preserve that neutral skip outcome instead of inventing discussion work.
 - Emit artifact-only outputs:
   - `discussion_ideas.json`
   - `discussion_ideas.md`
@@ -78,6 +81,7 @@ python3 /root/.codex/skills/course-lab-discussion-ideas/scripts/build_discussion
 - This skill does not write final harmonized discussion prose.
 - This skill does not stop for a direct approval prompt; it writes judgment-ready approval state for synthesis instead.
 - This skill may emit reusable snippets, but those snippets are not the final discussion section.
+- If the parent run is on a `none_found` reference-selection lane, this skill may emit zero ideas and must keep that skip path visible rather than forcing fake candidates.
 
 ## Common Mistakes
 

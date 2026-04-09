@@ -5,7 +5,7 @@ from pathlib import Path
 
 
 SKILL_DIR = Path(__file__).resolve().parents[1]
-PARENT_SKILL_PATH = Path("/root/.codex/skills/modern-physics-latex-report-rennovated/SKILL.md")
+PARENT_SKILL_PATH = Path("/root/.codex/skills/course-lab-report/SKILL.md")
 
 
 class CourseLabResultsInterpretationPackageTests(unittest.TestCase):
@@ -51,6 +51,13 @@ class CourseLabResultsInterpretationPackageTests(unittest.TestCase):
         self.assertIn("discussion", text.lower())
         self.assertNotIn("modern-physics-latex-report-rennovated/scripts", text)
 
+    def test_skill_markdown_uses_canonical_workspace_notes_sections_paths(self) -> None:
+        text = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
+
+        self.assertIn("/path/to/results/<experiment>/notes/sections.json", text)
+        self.assertIn("/path/to/results/<experiment>/notes/sections.md", text)
+        self.assertNotIn('/path/to/results/<experiment>/sections.json"', text)
+
     def test_agent_prompt_requires_handout_first_local_artifact_only_interpretation(self) -> None:
         agent_path = SKILL_DIR / "agents" / "openai.yaml"
         self.assertTrue(agent_path.exists(), "agents/openai.yaml must exist before prompt checks run")
@@ -72,7 +79,7 @@ class CourseLabResultsInterpretationPackageTests(unittest.TestCase):
 
         text = PARENT_SKILL_PATH.read_text(encoding="utf-8")
 
-        self.assertIn("$course-lab-results-interpretation", text)
+        self.assertIn("`course-lab-results-interpretation`", text)
 
 
 if __name__ == "__main__":

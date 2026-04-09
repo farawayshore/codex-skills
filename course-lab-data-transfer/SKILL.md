@@ -38,6 +38,8 @@ Do not use this skill to choose the experiment, decode a handout, compute result
 - Keep uncertainty local. If a digit, unit, symbol, or handwritten phrase is weak, mark that weakness in the transferred Markdown instead of silently choosing one interpretation.
 - If a transferred phenomenon description is not visibly supported by the matched picture-result evidence, keep it provisional or surface a question instead of treating it as final.
 - Stop after the transferred Markdown draft and explicitly ask the user to proofread it before calculations, uncertainty analysis, anomaly judgments, or report drafting continue.
+- When the selected data group contains both spreadsheets and companion PDF or scan sources, do not treat spreadsheet transfer alone as complete.
+- When discovery exposes companion scan sources such as data.pdf, record-book scans, or source images inside the selected data group, data transfer is incomplete until those sources are transferred or explicitly marked unresolved.
 
 ## Primary Commands
 
@@ -97,6 +99,7 @@ python3 /root/.codex/skills/course-lab-data-transfer/scripts/build_transfer_draf
 - For PDFs and images, vision-first is mandatory. MinerU Markdown is the second reader, not the first.
 - PDF-to-text is the third comparison source. Use it when the first two readings conflict or confidence stays low.
 - When matched picture-result evidence exists, do not finalize a transferred phenomenon description until that description has been checked against the relevant picture with vision.
+- Either transfer companion PDF/scan sources in the same stage or leave an explicit unresolved note that later stages can see.
 - Do not silently replace handwritten Chinese notes with English-only summaries.
 - Do not convert uncertain transfer artifacts into confident result statements.
 - Keep parent-skill path dependencies out of the toolchain. Use the local copied scripts in this folder for bundle prep and draft generation.

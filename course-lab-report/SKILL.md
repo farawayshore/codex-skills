@@ -11,8 +11,6 @@ Use this skill as the standalone parent orchestrator for the installed course-la
 
 This package is coordination-first. It should stay compact, route work to the installed leaf skills, and avoid re-embedding sibling runtime logic that already belongs in those leaf packages.
 
-The older `/root/.codex/skills/modern-physics-latex-report-rennovated/` package remains legacy reference material. This new parent must not rely on that folder at runtime.
-
 ## When To Use
 
 - A course lab-report run needs one parent controller rather than a monolithic executor.
@@ -49,7 +47,12 @@ The older `/root/.codex/skills/modern-physics-latex-report-rennovated/` package 
 - Decide whether a step should stay inline, use a smaller worker, or stay local.
 - The parent must not treat summary-only handout artifacts as proof that handout normalization completed.
 - Successful handout normalization must leave persistent decoded handout artifacts at `AI_works/resources/experiment_handout/Modern Physics Experiments/pdf_decoded/<experiment-name>/<experiment-name>.md` and `AI_works/resources/experiment_handout/Modern Physics Experiments/pdf_decoded/<experiment-name>/<experiment-name>.json`.
-- The parent must not accept `handout_extract.md`, `notes/sections.md`, or `sections.json` by themselves as substitutes for those persistent decoded handout artifacts.
+- The parent must not accept `handout_extract.md`, `notes/sections.md`, or `notes/sections.json` by themselves as substitutes for those persistent decoded handout artifacts.
+- If the persistent decoded handout artifacts are newer than the workspace section summaries (`notes/sections.json` or `notes/sections.md`), the parent must rerun handout normalization before downstream theory or scaffold stages, then rerun `course-lab-run-plan` before `course-lab-body-scaffold` or `course-lab-experiment-principle`.
+- The parent must keep `AI_works/results/<experiment-safe-name>/course_lab_report_state.json` and must not claim completion when that controller-state artifact is absent.
+- The controller state must record stage artifact paths, `skipped_optional_leaves`, the last mutating leaf for each owned bucket, rerun history, and the current reference-selection contract state.
+- When discovery exposes companion scan sources such as data.pdf, record-book scans, or source images inside the selected data group, data transfer is incomplete until those sources are transferred or explicitly marked unresolved.
+- The parent must route source-coverage gaps back to `course-lab-data-transfer` instead of flattening the gap into generic discussion prose.
 - Pause when `agent_proposed_key_results` exist and wait for item-level user confirmation instead of silently promoting new scientific scope.
 - Track proposal confirmation state per proposed result (`pending_user`, `approved`, `rejected`, `needs_revision`) in the controller-state artifact.
 - Reroute only approved proposals back through `course-lab-run-plan`, upstream recomputation leaves, and confirmed-reference reuse.
@@ -59,6 +62,8 @@ The older `/root/.codex/skills/modern-physics-latex-report-rennovated/` package 
 - Keep artifact handoffs explicit for optional `course-lab-symbolic-expressing` calls: callers must pass source paths and consume the returned temp TeX path; the parent must not treat this helper as proof that final-staging ran.
 - Keep artifact handoffs explicit, including the `course-lab-final-staging -> course-lab-figure-evidence` comparison-case handoff needed for same-case experiment-versus-simulation figure placement.
 - Keep artifact handoffs explicit for the discovery-driven same-experiment reference comparison path: the parent must treat `selected_reference_reports` plus `reference_selection_status` as the only accepted finalize-QC reference-selection contract.
+- Each `selected_reference_reports` entry must preserve `pdf_path`, `expected_decoded_markdown_path`, and `expected_decoded_json_path`; plain strings are malformed and must reroute to `course-lab-discovery`.
+- `reference_selection_status: none_found` is a neutral state, not a hidden failure; when that state applies, optional discussion/reference leaves must be recorded in `skipped_optional_leaves` instead of being reported as broken.
 - The parent must not silently continue past `course-lab-experiment-principle` without explicit principle-stage artifact proof.
 - The parent must not treat manually written theory prose as proof that principle-image staging ran.
 - The parent must not hand-write a manual short draft once the run has progressed past setup and planning; late report mutation must remain owned by `course-lab-experiment-principle`, `course-lab-final-staging`, and `course-lab-figure-evidence`.
@@ -88,7 +93,7 @@ The older `/root/.codex/skills/modern-physics-latex-report-rennovated/` package 
 ## Handout-Normalization Completion Gate
 
 - The parent must require persistent decoded handout artifacts at `AI_works/resources/experiment_handout/Modern Physics Experiments/pdf_decoded/<experiment-name>/<experiment-name>.md` and `AI_works/resources/experiment_handout/Modern Physics Experiments/pdf_decoded/<experiment-name>/<experiment-name>.json` when `course-lab-handout-normalization` succeeds.
-- The parent must not treat `handout_extract.md`, `notes/sections.md`, `sections.json`, or other summary-only handout artifacts as proof that the decode stage completed.
+- The parent must not treat `handout_extract.md`, `notes/sections.md`, `notes/sections.json`, or other summary-only handout artifacts as proof that the decode stage completed.
 - The parent must stop instead of silently continuing when persistent decoded handout artifacts are missing.
 
 ## References

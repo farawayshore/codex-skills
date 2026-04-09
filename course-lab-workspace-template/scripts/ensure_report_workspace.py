@@ -32,6 +32,18 @@ XCOLOR_PACKAGE_RE = re.compile(
 NEEDS_INPUT_COLOR_RE = re.compile(r"\\definecolor\s*\{NeedsInputRed\}")
 NEEDS_INPUT_DEFINITION_RE = re.compile(r"\\(?:newcommand|renewcommand|providecommand)\s*\{\\NeedsInput\}")
 BEGIN_DOCUMENT_RE = re.compile(r"(?m)^\\begin\{document\}")
+SECTION_BLOCK_RE = re.compile(r"(?ms)^\\section\{(?P<heading>[^}]+)\}[ \t]*\n(?P<body>.*?)(?=^\\section\{|^\\appendix\b|\Z)")
+
+STOCK_TAU_SCaffold_CUES = (
+    "Briefly introduce the physical phenomenon, the scientific background, and the practical value of the experiment.",
+    "State the main physical quantity or phenomenon to be measured or verified.",
+    "Replace the example formulas below with the equations for your own experiment.",
+    "Perform the safety check and instrument warm-up.",
+    "Present the original measurements clearly.",
+    "Interpret whether the results support the theory, whether the observed phenomena match expectations",
+)
+
+FINAL_STAGING_ALLOW_OVERWRITE = "% course-lab-final-staging:allow-overwrite"
 
 
 def parse_args() -> argparse.Namespace:
@@ -264,6 +276,122 @@ def ensure_placeholder_macros(tex_path: Path) -> dict[str, bool]:
     }
 
 
+def looks_like_stock_tau_template(text: str) -> bool:
+    heading_hits = sum(
+        1
+        for heading in (
+            r"\section{Experiment Purpose}",
+            r"\section{Experiment Steps}",
+            r"\section{Experiment Process and Results}",
+            r"\section{Experiment Discussion}",
+        )
+        if heading in text
+    )
+    cue_hits = sum(1 for cue in STOCK_TAU_SCaffold_CUES if cue in text)
+    return heading_hits >= 3 and cue_hits >= 3
+
+
+def replace_section_block(
+    text: str,
+    *,
+    source_heading: str,
+    target_heading: str | None = None,
+    new_body: str | None = None,
+) -> tuple[str, bool]:
+    target = target_heading or source_heading
+    pattern = re.compile(
+        rf"(?ms)^\\section\{{{re.escape(source_heading)}\}}[ \t]*\n(?P<body>.*?)(?=^\\section\{{|^\\appendix\b|\Z)"
+    )
+    match = pattern.search(text)
+    if match is None:
+        return text, False
+
+    body = new_body if new_body is not None else match.group("body")
+    replacement = f"\\section{{{target}}}\n{body.rstrip()}\n\n"
+    return text[: match.start()] + replacement + text[match.end() :], True
+
+
+def normalize_stock_tau_template_scaffold(tex_path: Path) -> dict[str, bool]:
+    text = tex_path.read_text(encoding="utf-8")
+    if not looks_like_stock_tau_template(text):
+        return {"stock_scaffold_normalized": False}
+
+    text, _ = replace_section_block(
+        text,
+        source_heading="Introduction",
+        new_body=r"\NeedsInput{Draft the introduction from the normalized handout and experiment-specific context.}",
+    )
+    text, _ = replace_section_block(
+        text,
+        source_heading="Experiment Purpose",
+        target_heading="Objectives",
+        new_body=(
+            "\\begin{itemize}\n"
+            "    \\item \\NeedsInput{State the main experiment objective.}\n"
+            "    \\item \\NeedsInput{State the main instrument or operational skill developed in the experiment.}\n"
+            "    \\item \\NeedsInput{State the intended theory, literature, or reference comparison.}\n"
+            "\\end{itemize}"
+        ),
+    )
+    text, _ = replace_section_block(
+        text,
+        source_heading="Experiment Principle",
+        new_body=r"\NeedsInput{Draft the experiment principle from the normalized handout and stage any theory figures inside this section.}",
+    )
+    text, _ = replace_section_block(
+        text,
+        source_heading="Experiment Steps",
+        target_heading="Experimental Procedure and Observations",
+        new_body=(
+            f"{FINAL_STAGING_ALLOW_OVERWRITE}\n"
+            r"\NeedsInput{Draft the experimental procedure and observations from the normalized handout and validated evidence.}"
+        ),
+    )
+    text, _ = replace_section_block(
+        text,
+        source_heading="Experiment Process and Results",
+        target_heading="Results and Analysis",
+        new_body=(
+            f"{FINAL_STAGING_ALLOW_OVERWRITE}\n"
+            r"\NeedsInput{Draft the results and analysis section after processed data, interpretation, and discussion artifacts are stable.}"
+        ),
+    )
+    text, _ = replace_section_block(
+        text,
+        source_heading="Experiment Discussion",
+        new_body=(
+            f"{FINAL_STAGING_ALLOW_OVERWRITE}\n"
+            r"\NeedsInput{Draft the experiment discussion after the synthesized discussion artifacts are stable.}"
+        ),
+    )
+
+    if r"\section{Appendix}" not in text:
+        appendix_block = (
+            "\\appendix\n"
+            "\\section{Appendix}\n"
+            f"{FINAL_STAGING_ALLOW_OVERWRITE}\n"
+            r"\NeedsInput{Add appendix code, data files, or other late-stage artifacts when they are available.}"
+            "\n\n"
+        )
+        comment_pattern = re.compile(
+            r"(?ms)^% Uncomment the next lines if you need appendices\.\n"
+            r"% \\appendix\n"
+            r"% \\section\{Appendix\}\n"
+            r"% Put supplementary derivations, extra tables, or code here\.\n?"
+        )
+        if comment_pattern.search(text):
+            text = comment_pattern.sub(appendix_block, text)
+        else:
+            end_document = text.rfind(r"\end{document}")
+            if end_document != -1:
+                text = text[:end_document].rstrip() + "\n\n" + appendix_block + text[end_document:]
+            else:
+                text = text.rstrip() + "\n\n" + appendix_block
+
+    tex_path.write_text(text, encoding="utf-8")
+    return {"stock_scaffold_normalized": True}
+
+
 def main() -> int:
     args = parse_args()
     discovery_json_path, discovery_payload = load_discovery_payload(args.discovery_json)
@@ -298,6 +426,7 @@ def main() -> int:
         raise SystemExit(f"Canonical TeX file does not exist for modify mode: {canonical_tex}")
 
     placeholder_info = ensure_placeholder_macros(canonical_tex)
+    scaffold_info = normalize_stock_tau_template_scaffold(canonical_tex)
 
     procedures_path = outdir / f"{safe_experiment_dirname(experiment)}_procedures.md"
     if not procedures_path.exists():
@@ -338,6 +467,7 @@ def main() -> int:
     if "backup_path" in template_info:
         manifest["backup_path"] = template_info["backup_path"]
     manifest.update(placeholder_info)
+    manifest.update(scaffold_info)
 
     manifest_path = outdir / "notes" / "workspace_manifest.json"
     write_json(manifest_path, manifest)

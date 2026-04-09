@@ -1128,6 +1128,20 @@ class BuildFinalStagingTests(unittest.TestCase):
             self.assertNotIn("Case 3", tex)
             self.assertNotIn(r"\paragraph{Compact Case Comparison}", tex)
 
+    def test_results_cases_render_directly_under_results_without_wrapper_subsection(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_name:
+            fixture = self.prepare_fixture(Path(temp_name))
+
+            completed = self.run_builder(fixture)
+
+            self.assertEqual(completed.returncode, 0, msg=f"{completed.stdout}\n{completed.stderr}")
+            tex = fixture["main_tex"].read_text(encoding="utf-8")
+            results_block = slice_between(tex, r"\section{Results}", r"\section{Experiment Discussion}")
+            self.assertNotIn(r"\subsection{Direct And Indirect Results}", results_block)
+            self.assertIn("% course-lab-final-staging:results:begin", results_block)
+            after_marker = results_block.split("% course-lab-final-staging:results:begin", 1)[1].lstrip()
+            self.assertTrue(after_marker.startswith(r"\subsection{Case A}"), msg=after_marker[:200])
+
     def test_appendix_data_files_render_as_data_records_without_csv_label(self) -> None:
         with tempfile.TemporaryDirectory() as temp_name:
             fixture = self.prepare_fixture(
@@ -1728,6 +1742,51 @@ class BuildFinalStagingTests(unittest.TestCase):
             self.assertIn("Ambiguous", combined)
             self.assertIn("Results and Analysis", combined)
             self.assertIn("line", combined)
+
+    def test_discussion_renders_assigned_thinking_questions_from_body_scaffold(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_name:
+            root = Path(temp_name)
+            fixture = self.prepare_fixture(root)
+            body_scaffold = json.loads(fixture["body_scaffold_json"].read_text(encoding="utf-8"))
+            body_scaffold["scaffold_sections"][2]["source_key"] = "thinking_questions"
+            body_scaffold["scaffold_sections"][2]["thinking_questions"] = [
+                "1. 试推导其半波电压 U_pi 的表达式。",
+                "2. 如果电光晶体的光轴与激光束不平行，如何检查？",
+            ]
+            write_json(fixture["body_scaffold_json"], body_scaffold)
+
+            subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPT_DIR / "build_final_staging.py"),
+                    "--main-tex",
+                    str(fixture["main_tex"]),
+                    "--body-scaffold-json",
+                    str(fixture["body_scaffold_json"]),
+                    "--procedures-markdown",
+                    str(fixture["procedures_markdown"]),
+                    "--processed-data-json",
+                    str(fixture["processed_data_json"]),
+                    "--results-interpretation-json",
+                    str(fixture["results_interpretation_json"]),
+                    "--discussion-synthesis-json",
+                    str(fixture["discussion_synthesis_json"]),
+                    "--output-summary-json",
+                    str(fixture["output_summary_json"]),
+                    "--output-summary-markdown",
+                    str(fixture["output_summary_markdown"]),
+                    "--output-unresolved",
+                    str(fixture["output_unresolved"]),
+                    "--output-appendix-manifest",
+                    str(fixture["output_appendix_manifest"]),
+                ],
+                check=True,
+            )
+
+            text = fixture["main_tex"].read_text(encoding="utf-8")
+            self.assertIn(r"\subsection{Assigned Thinking Questions}", text)
+            self.assertIn(r"试推导其半波电压 U\_pi 的表达式", text)
+            self.assertIn("如果电光晶体的光轴与激光束不平行", text)
 
 
 if __name__ == "__main__":

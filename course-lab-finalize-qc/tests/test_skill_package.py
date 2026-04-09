@@ -5,7 +5,7 @@ from pathlib import Path
 
 
 SKILL_DIR = Path(__file__).resolve().parents[1]
-PARENT_SKILL_PATH = Path("/root/.codex/skills/modern-physics-latex-report-rennovated/SKILL.md")
+PARENT_SKILL_PATH = Path("/root/.codex/skills/course-lab-report/SKILL.md")
 
 
 class CourseLabFinalizeQCPackageTests(unittest.TestCase):
@@ -68,7 +68,7 @@ class CourseLabFinalizeQCPackageTests(unittest.TestCase):
 
         text = PARENT_SKILL_PATH.read_text(encoding="utf-8")
 
-        self.assertIn("$course-lab-finalize-qc", text)
+        self.assertIn("`course-lab-finalize-qc`", text)
 
 
 if __name__ == "__main__":

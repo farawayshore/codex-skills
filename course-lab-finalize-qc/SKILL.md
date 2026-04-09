@@ -36,6 +36,7 @@ Do not use this skill to decode handouts, write or rewrite report prose, execute
 - Record compiled PDF page count and emit a visible warning when the report falls outside the preferred `20-30` page band.
 - Accept optional `--discovery-json` input when discovery already emitted `selected_reference_reports` and `reference_selection_status`.
 - Run the same-experiment reference comparison only after compile, local QC, layout, and PDF-size gates already pass.
+- Treat `discussion_ideas` as the canonical Further Discussion QA payload when upstream hands off pre-synthesis idea artifacts, while tolerating legacy `discussion_candidates` files for backward compatibility.
 - Read only discovery-produced same-experiment reference selections. This skill is a detector and reroute surface; it does not rediscover references and does not decode them.
 - Emit:
   - `final_qc_summary.json`

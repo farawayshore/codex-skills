@@ -17,15 +17,18 @@ This matrix turns final QC into a routing checkpoint instead of a terminal step.
 - Route procedure coverage, placeholder gaps, or scaffold mismatch to `course-lab-body-scaffold`.
 - Revisit `course-lab-run-plan` if the missing section suggests a planning omission.
 - Route missing persistent decoded handout artifacts back to `course-lab-handout-normalization`.
-- Treat `handout_extract.md`, `notes/sections.md`, `sections.json`, or other summary-only handout artifacts as insufficient when the persistent decode proof is missing.
+- Treat `handout_extract.md`, `notes/sections.md`, `notes/sections.json`, or other summary-only handout artifacts as insufficient when the persistent decode proof is missing.
+- If the persistent decoded handout artifacts are newer than the workspace section summaries, rerun handout normalization before downstream theory or scaffold stages, then rerun `course-lab-run-plan` before downstream theory or scaffold stages resume.
 - Route missing theory-stage artifact proof such as `principle_ownership.json`, `principle_figures.json`, `principle_figures.tex`, or `principle_unresolved.md` back to `course-lab-experiment-principle`.
 - Route missing late-stage artifact proof such as `final_staging_summary.json`, `appendix_code_manifest.json`, `picture_evidence_plan.json`, `signatory_pages_manifest.json`, or `signatory_pages.tex` back to the responsible late-stage leaf instead of accepting a manual shortcut.
+- route source-coverage gaps back to `course-lab-data-transfer` when companion scan sources such as data.pdf, record-book scans, or source images were discovered but not transferred or explicitly marked unresolved.
 
 ## Reference-Procedure Comparison Failures
 
 - Treat the discovery-driven reference-procedure comparison as a routing checkpoint, not as a terminal verdict.
 - Route malformed same-experiment reference selection or missing `selected_reference_reports` contract fields back to `course-lab-discovery`.
 - Route selected same-experiment references that still lack decoded Markdown back to `course-lab-handout-normalization`.
+- Treat `reference_selection_status: none_found` as a neutral disabled lane; record the skip in controller state instead of inventing a reroute.
 - Route missing reference-procedure heading lanes to `course-lab-body-scaffold`.
 - Route thin staged lane content to `course-lab-final-staging`.
 - Route weak theory/comparison/evidence support inside an existing lane to `course-lab-results-interpretation`.

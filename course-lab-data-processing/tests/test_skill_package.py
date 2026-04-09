@@ -5,7 +5,7 @@ from pathlib import Path
 
 
 SKILL_DIR = Path(__file__).resolve().parents[1]
-PARENT_SKILL_PATH = Path("/root/.codex/skills/modern-physics-latex-report-rennovated/SKILL.md")
+PARENT_SKILL_PATH = Path("/root/.codex/skills/course-lab-report/SKILL.md")
 
 
 class CourseLabDataProcessingPackageTests(unittest.TestCase):
@@ -45,7 +45,7 @@ class CourseLabDataProcessingPackageTests(unittest.TestCase):
     def test_parent_skill_mentions_uncertainty_subskill(self) -> None:
         text = PARENT_SKILL_PATH.read_text(encoding="utf-8")
 
-        self.assertIn("$course-lab-data-processing", text)
+        self.assertIn("`course-lab-data-processing`", text)
 
     def test_agent_prompt_requires_handout_first_and_derived_quantities(self) -> None:
         text = (SKILL_DIR / "agents" / "openai.yaml").read_text(encoding="utf-8")

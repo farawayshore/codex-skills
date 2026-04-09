@@ -44,12 +44,16 @@ class TestRecoveryContractPlaceholder(unittest.TestCase):
             "late-stage ownership log",
             "last mutating leaf for each owned late-stage region or bucket",
             "rerun history and the reason for each reroute",
+            "stage artifact paths",
+            "skipped_optional_leaves",
             "agent_proposed_key_results",
             "proposal confirmation state",
             "pending_user",
             "approved",
             "rejected",
             "needs_revision",
+            "reference_selection_status",
+            "none_found",
             "only approved proposals",
             "preserve unresolved gaps",
             "sequential repair planning",
@@ -66,6 +70,8 @@ class TestRecoveryContractPlaceholder(unittest.TestCase):
         expected_snippets = [
             "selected_reference_reports",
             "same-experiment reference selection",
+            "expected_decoded_markdown_path",
+            "expected_decoded_json_path",
             "declared-unresolved",
             "data-lack",
             "reroute only approved proposals",
@@ -74,6 +80,8 @@ class TestRecoveryContractPlaceholder(unittest.TestCase):
             "comparison-ready",
             "consume confirmed comparison artifacts and confirmed references",
             "literature search",
+            "skipped_optional_leaves",
+            "none_found",
         ]
         for snippet in expected_snippets:
             with self.subTest(snippet=snippet):
@@ -93,6 +101,9 @@ class TestRecoveryContractPlaceholder(unittest.TestCase):
             "record that fallback",
             "course-lab-body-scaffold",
             "course-lab-run-plan",
+            "notes/sections.json",
+            "notes/sections.md",
+            "rerun handout normalization before downstream theory or scaffold stages",
             "course-lab-results-interpretation",
             "course-lab-discussion-ideas",
             "course-lab-discussion-synthesis",
@@ -121,15 +132,39 @@ class TestRecoveryContractPlaceholder(unittest.TestCase):
         expected_snippets = [
             "same-experiment reference",
             "selected_reference_reports",
+            "expected_decoded_markdown_path",
+            "expected_decoded_json_path",
+            "plain strings",
             "course-lab-discovery",
             "course-lab-handout-normalization",
             "course-lab-results-interpretation",
             "declared-unresolved",
             "data-lack",
+            "stage artifact paths",
+            "skipped_optional_leaves",
+            "last mutating leaf",
+            "reference_selection_status",
+            "none_found",
         ]
         for snippet in expected_snippets:
             with self.subTest(snippet=snippet):
                 self.assertIn(snippet, text)
+
+    def test_recovery_docs_route_source_coverage_gaps_to_data_transfer(self) -> None:
+        recovery_text = (PACKAGE_ROOT / "references" / "recovery_matrix.md").read_text(
+            encoding="utf-8"
+        )
+        matrix_text = (PACKAGE_ROOT / "references" / "leaf_responsibility_matrix.md").read_text(
+            encoding="utf-8"
+        )
+        joined = "\n".join([recovery_text, matrix_text])
+        expected_snippets = [
+            "route source-coverage gaps back to `course-lab-data-transfer`",
+            "companion scan sources such as data.pdf",
+        ]
+        for snippet in expected_snippets:
+            with self.subTest(snippet=snippet):
+                self.assertIn(snippet, joined)
 
 
 if __name__ == "__main__":

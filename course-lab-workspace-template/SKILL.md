@@ -35,6 +35,7 @@ Do not use this skill to discover sources, decode PDFs, transfer data, interpret
 - For single-file templates, copy the chosen `.tex` into the canonical report path.
 - For bundle templates, copy `main.tex` plus companion assets into the workspace while preserving bundle-relative paths.
 - Ensure the canonical TeX file can render `\NeedsInput{...}` placeholders by inserting the macro block when it is missing.
+- For the stock English `tau_templet copy.tex`, normalize the generic scaffold into a later-skill-friendly baseline by converting stock draft prose into `\NeedsInput{...}` placeholders, renaming stock headings to the downstream family contract, and materializing an appendix section with `% course-lab-final-staging:allow-overwrite`.
 - Treat `/tmp/course-lab-discovery-*.json` as cache input, not as the canonical workspace artifact.
 - Write `notes/workspace_manifest.json` and optionally a second manifest via `--output-json`.
 - Record `template_language`, `template_kind`, `template_root`, `template_entry`, and `copied_companion_assets` in the workspace manifest.
@@ -72,7 +73,8 @@ Use `--canonical-tex existing.tex` when `modify` or `rewrite` must target a spec
 3. Identify whether the chosen template is a standalone `.tex` file or a bundle directory rooted at `main.tex`.
 4. Run `ensure_report_workspace.py` with `--discovery-json ...` first so course, experiment, results-root, and discovered source lists come from the same cache context unless you intentionally override them.
 5. Inspect the current result directory state. If multiple `.tex` files exist and none is clearly canonical, stop and carry that ambiguity back to the user with `--canonical-tex` as the follow-up.
-6. Review `canonical_tex`, `workspace`, `procedures_markdown`, `build_script`, `template_kind`, `template_language`, `template_root`, `template_entry`, `copied_companion_assets`, `discovery_cache_input`, and the `needs_input_*` manifest fields before handing off to `course-lab-metadata-frontmatter` or later drafting skills.
+6. When the chosen template is the stock English tau scaffold, confirm that the canonical TeX now exposes family-compatible headings such as `Objectives`, `Experimental Procedure and Observations`, `Results and Analysis`, and `Appendix`, and that the late-stage-owned sections are placeholder- or overwrite-ready instead of being left as generic boilerplate.
+7. Review `canonical_tex`, `workspace`, `procedures_markdown`, `build_script`, `template_kind`, `template_language`, `template_root`, `template_entry`, `copied_companion_assets`, `discovery_cache_input`, and the `needs_input_*` manifest fields before handing off to `course-lab-metadata-frontmatter` or later drafting skills.
 
 ## Quick Reference
 
@@ -86,6 +88,7 @@ Use `--canonical-tex existing.tex` when `modify` or `rewrite` must target a spec
 | One existing `.tex` file and no `main.tex` | `modify` can reuse it automatically |
 | Multiple `.tex` files and no confirmed canonical file | Stop and ask for `--canonical-tex` |
 | Template lacks `\NeedsInput` support | Let the script inject the placeholder macro block |
+| Template is the stock English tau scaffold | Normalize its headings and boilerplate into the course-lab family’s placeholder- and overwrite-ready baseline |
 
 ## Boundary Rules
 
@@ -105,6 +108,7 @@ Use `--canonical-tex existing.tex` when `modify` or `rewrite` must target a spec
 - Treating a folder with several `.tex` files as if `main.tex` were obvious when it is not.
 - Using `rewrite` without noticing that it will replace the canonical file and create a backup.
 - Assuming the template already defines `\NeedsInput{...}`.
+- Leaving the stock English tau template unchanged so later skills treat generic scaffold prose as authored content and refuse to overwrite owned sections.
 - Letting workspace setup drift into metadata or body drafting.
 
 ## Resources

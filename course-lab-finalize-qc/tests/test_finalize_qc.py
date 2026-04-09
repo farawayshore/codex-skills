@@ -59,6 +59,15 @@ def write_json(path: Path, payload: object) -> None:
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+def write_required_workflow_artifacts(workspace: Path) -> None:
+    write_json(workspace / "principle_ownership.json", {"owner": "course-lab-experiment-principle"})
+    write_json(workspace / "final_staging_summary.json", {"written_sections": ["discussion"]})
+    write_json(workspace / "appendix_code_manifest.json", {"entries": []})
+    write_json(workspace / "picture_evidence_plan.json", {"evidence_units": []})
+    write_json(workspace / "principle_figures.json", {"principle_image_count": 1})
+    (workspace / "principle_figures.tex").write_text("% principle figures\n", encoding="utf-8")
+
+
 def write_passing_tex(path: Path) -> None:
     path.write_text(
         "\n".join(
@@ -139,6 +148,7 @@ class FinalizeQCTests(unittest.TestCase):
             write_build_asset(asset, page_count=24)
             write_passing_tex(main_tex)
             write_procedures(procedures)
+            write_required_workflow_artifacts(workspace)
 
             summary = run_finalize_qc(
                 main_tex=main_tex,
@@ -244,6 +254,37 @@ class FinalizeQCTests(unittest.TestCase):
             self.assertFalse(summary["overall_pass"])
             self.assertIn("QC failed", unresolved.read_text(encoding="utf-8"))
 
+    def test_missing_principle_and_late_stage_artifacts_fail_even_when_build_and_qc_pass(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            workspace = root / "report"
+            workspace.mkdir()
+            asset = root / "build_asset.sh"
+            main_tex = workspace / "main.tex"
+            procedures = workspace / "procedures.md"
+            summary_json = workspace / "final_qc_summary.json"
+            summary_md = workspace / "final_qc_summary.md"
+            unresolved = workspace / "final_qc_unresolved.md"
+
+            write_build_asset(asset, page_count=24)
+            write_passing_tex(main_tex)
+            write_procedures(procedures)
+
+            summary = run_finalize_qc(
+                main_tex=main_tex,
+                procedures=procedures,
+                output_summary_json=summary_json,
+                output_summary_markdown=summary_md,
+                output_unresolved=unresolved,
+                build_asset=asset,
+            )
+
+            self.assertFalse(summary["overall_pass"])
+            text = unresolved.read_text(encoding="utf-8")
+            self.assertIn("principle_ownership.json", text)
+            self.assertIn("final_staging_summary.json", text)
+            self.assertIn("picture_evidence_plan.json", text)
+
     def test_oversized_pdf_records_compress_png_handoff(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
@@ -288,6 +329,7 @@ class FinalizeQCTests(unittest.TestCase):
             write_build_asset(asset, page_count=12)
             write_passing_tex(main_tex)
             write_procedures(procedures)
+            write_required_workflow_artifacts(workspace)
 
             summary = run_finalize_qc(
                 main_tex=main_tex,
@@ -460,6 +502,7 @@ class FinalizeQCTests(unittest.TestCase):
             write_build_asset(asset, page_count=24)
             write_passing_tex(main_tex)
             write_procedures(procedures)
+            write_required_workflow_artifacts(workspace)
             write_json(discovery, {"reference_selection_status": "none_found", "selected_reference_reports": []})
 
             summary = run_finalize_qc(
@@ -473,9 +516,12 @@ class FinalizeQCTests(unittest.TestCase):
             )
 
             self.assertTrue(summary["overall_pass"])
-            self.assertFalse(summary["reference_procedure_comparison_pass"])
+            self.assertTrue(summary["reference_procedure_comparison_pass"])
             self.assertFalse(summary["reference_procedure_comparison_blocked"])
+            self.assertFalse(summary["reference_procedure_comparison"]["enabled"])
             self.assertEqual(summary["reference_procedure_comparison"]["selection_status"], "none_found")
+            self.assertNotIn("Reference Procedure Comparison", summary_md.read_text(encoding="utf-8"))
+            self.assertNotIn("reference procedure", unresolved.read_text(encoding="utf-8").lower())
 
     def test_ambiguous_reference_selection_reroutes_to_discovery(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -507,6 +553,46 @@ class FinalizeQCTests(unittest.TestCase):
 
             self.assertFalse(summary["overall_pass"])
             self.assertTrue(summary["reference_procedure_comparison_blocked"])
+            self.assertEqual(summary["recommended_reroutes"][0]["target_skill"], "course-lab-discovery")
+
+    def test_finalize_qc_surfaces_malformed_reference_bundle_as_blocking_reroute(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            workspace = root / "report"
+            workspace.mkdir()
+            asset = root / "build_asset.sh"
+            main_tex = workspace / "main.tex"
+            procedures = workspace / "procedures.md"
+            discovery = workspace / "discovery.json"
+            summary_json = workspace / "final_qc_summary.json"
+            summary_md = workspace / "final_qc_summary.md"
+            unresolved = workspace / "final_qc_unresolved.md"
+
+            write_build_asset(asset, page_count=24)
+            write_passing_tex(main_tex)
+            write_procedures(procedures)
+            write_required_workflow_artifacts(workspace)
+            write_json(
+                discovery,
+                {
+                    "reference_selection_status": "selected",
+                    "selected_reference_reports": [str(workspace / "279964_sysut_23355030 贾儒恺 电光调制.pdf")],
+                },
+            )
+
+            summary = run_finalize_qc(
+                main_tex=main_tex,
+                procedures=procedures,
+                discovery_json=discovery,
+                output_summary_json=summary_json,
+                output_summary_markdown=summary_md,
+                output_unresolved=unresolved,
+                build_asset=asset,
+            )
+
+            self.assertFalse(summary["overall_pass"])
+            self.assertTrue(summary["reference_procedure_comparison_blocked"])
+            self.assertIn("malformed-discovery-contract", json.dumps(summary["reference_procedure_comparison"]))
             self.assertEqual(summary["recommended_reroutes"][0]["target_skill"], "course-lab-discovery")
 
     def test_declared_unresolved_reference_gap_still_produces_visible_warning(self) -> None:

@@ -33,6 +33,9 @@ Do not use this skill to pick the experiment, choose a template, edit `main.tex`
 - Successful handout normalization must leave persistent decoded handout artifacts under `AI_works/resources/experiment_handout/Modern Physics Experiments/pdf_decoded/<experiment-name>/`.
 - The canonical persistent success paths are `AI_works/resources/experiment_handout/Modern Physics Experiments/pdf_decoded/<experiment-name>/<experiment-name>.md` and `AI_works/resources/experiment_handout/Modern Physics Experiments/pdf_decoded/<experiment-name>/<experiment-name>.json`.
 - Run `extract_decoded_sections.py` only on the chosen decoded JSON when section artifacts are actually needed.
+- When a workspace already exists, the canonical downstream normalized routing artifacts are `/path/to/results/<experiment>/notes/sections.json` and `/path/to/results/<experiment>/notes/sections.md`.
+- For selected same-experiment references, preserve `expected_decoded_markdown_path` and `expected_decoded_json_path` from discovery; if those fields are missing, reroute to `course-lab-discovery` instead of guessing.
+- If selected same-experiment references exist but the decoded Markdown path is still missing on disk, reroute back here and restore `expected_decoded_markdown_path` before downstream QC continues.
 - When you save paired normalization artifacts, use experiment-specific filenames such as `/tmp/course-lab-handout-normalization-<experiment-safe-name>-handout.json` and `/tmp/course-lab-handout-normalization-<experiment-safe-name>-handout.md`. Use source suffixes like `handout` and `reference` when both sources may exist in the same run.
 - Produce visible unresolved structure notes even when the run stops at the Markdown-first stage.
 - When JSON is required, produce one normalized section JSON and one normalized section Markdown artifact.
@@ -47,7 +50,7 @@ python3 /root/.codex/skills/course-lab-handout-normalization/scripts/extract_dec
   --output-markdown /tmp/course-lab-handout-normalization-<experiment-safe-name>-handout.md
 ```
 
-When later steps need saved normalization artifacts, keep the filenames experiment-specific instead of reusing one generic `sections.json` or `sections.md` path. Use short source suffixes like `handout` and `reference` when the run may normalize more than one PDF.
+When later steps need saved normalization artifacts, keep the filenames experiment-specific instead of reusing one generic `sections.json` or `sections.md` path. Once a workspace exists, route those normalized artifacts into `/path/to/results/<experiment>/notes/sections.json` and `/path/to/results/<experiment>/notes/sections.md`. Use short source suffixes like `handout` and `reference` when the run may normalize more than one PDF.
 
 ## Workflow
 
@@ -59,8 +62,9 @@ When later steps need saved normalization artifacts, keep the filenames experime
 6. Reuse a clearly matching decoded JSON when it already exists; otherwise invoke `$mineru-pdf-json`.
 7. If MinerU output still leaves headings, diagrams, or formula regions unclear, use vision as a complementary check. Do not replace MinerU with vision-only extraction.
 8. When decoding succeeds, persist the chosen outputs as `AI_works/resources/experiment_handout/Modern Physics Experiments/pdf_decoded/<experiment-name>/<experiment-name>.md` and `AI_works/resources/experiment_handout/Modern Physics Experiments/pdf_decoded/<experiment-name>/<experiment-name>.json` instead of leaving the run with temporary-only or summary-only artifacts.
-9. Run `extract_decoded_sections.py` only after the JSON step is available and necessary. If you save normalization outputs for downstream routing, also name them after the experiment, for example `/tmp/course-lab-handout-normalization-<experiment-safe-name>-handout.json` and `/tmp/course-lab-handout-normalization-<experiment-safe-name>-handout.md`.
-10. Review `title`, `section_order`, `front_matter`, `sections`, and `appendix_candidates`, then hand off either Markdown-first inspection notes or experiment-specific normalized artifacts plus unresolved structure notes.
+9. If the active source is a selected same-experiment reference, confirm the discovery entry still includes `expected_decoded_markdown_path` and `expected_decoded_json_path`; if not, reroute to `course-lab-discovery` before continuing.
+10. Run `extract_decoded_sections.py` only after the JSON step is available and necessary. If a workspace already exists, save the normalized routing artifacts as `/path/to/results/<experiment>/notes/sections.json` and `/path/to/results/<experiment>/notes/sections.md`; otherwise keep experiment-specific temporary filenames until the workspace exists.
+11. Review `title`, `section_order`, `front_matter`, `sections`, and `appendix_candidates`, then hand off either Markdown-first inspection notes or experiment-specific normalized artifacts plus unresolved structure notes.
 
 ## Quick Reference
 

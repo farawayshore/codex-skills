@@ -31,6 +31,14 @@ class ExtractDecodedSectionsTests(unittest.TestCase):
         self.assertEqual(summary["sections"]["principle"]["images"][0]["context_subheading"], "4.1 力曲线示意图")
         self.assertEqual(len(summary["sections"]["thinking_questions"]["list_items"]), 1)
 
+    def test_electro_optic_fixture_keeps_thinking_discussion_and_principle_images(self) -> None:
+        payload = json.loads((FIXTURES / "electro_optic_mineru.json").read_text(encoding="utf-8"))
+        summary = build_summary(payload)
+        self.assertIn("thinking_questions", summary["sections"])
+        self.assertEqual(summary["sections"]["thinking_questions"]["heading"], "六、思考与讨论")
+        self.assertEqual(len(summary["sections"]["thinking_questions"]["list_items"]), 2)
+        self.assertGreaterEqual(len(summary["sections"]["principle"]["images"]), 3)
+
 
 if __name__ == "__main__":
     unittest.main()

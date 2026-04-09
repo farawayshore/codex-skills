@@ -296,7 +296,22 @@ def abstract_checks(text: str) -> dict[str, object]:
     }
 
 
-def discussion_checks(text: str) -> dict[str, object]:
+def scaffold_thinking_questions(body_scaffold: dict[str, object] | None) -> list[str]:
+    if not isinstance(body_scaffold, dict):
+        return []
+
+    questions: list[str] = []
+    for section in body_scaffold.get("scaffold_sections", []) or []:
+        if not isinstance(section, dict):
+            continue
+        for item in section.get("thinking_questions", []) or []:
+            text = str(item).strip()
+            if text:
+                questions.append(text)
+    return questions
+
+
+def discussion_checks(text: str, body_scaffold: dict[str, object] | None = None) -> dict[str, object]:
     match = DISCUSSION_SECTION_RE.search(text)
     if not match:
         return {
@@ -306,6 +321,7 @@ def discussion_checks(text: str) -> dict[str, object]:
 
     discussion_text = match.group("body")
     issues: list[str] = []
+    scaffold_questions = scaffold_thinking_questions(body_scaffold)
     if not find_patterns(discussion_text, DISCUSSION_RELIABILITY_PATTERNS):
         issues.append("The discussion does not make an explicit reliability judgment.")
     if not find_patterns(discussion_text, DISCUSSION_COMPARISON_PATTERNS):
@@ -316,6 +332,8 @@ def discussion_checks(text: str) -> dict[str, object]:
         issues.append("The discussion does not include improvement suggestions or further physical interpretation.")
     if not find_patterns(discussion_text, DISCUSSION_CITATION_PATTERNS):
         issues.append("The discussion does not show literature support or citations.")
+    if scaffold_questions and "assigned thinking questions" not in normalize(discussion_text):
+        issues.append("Body scaffold requires an `Assigned Thinking Questions` subsection, but the compiled draft does not contain one.")
     return {
         "has_discussion_section": True,
         "discussion_issues": issues,
@@ -361,7 +379,8 @@ def further_discussion_checks(
 
     candidate_list: list[dict[str, object]] = []
     if isinstance(discussion_candidates, dict):
-        candidate_list = [item for item in discussion_candidates.get("discussion_candidates", []) if isinstance(item, dict)]
+        raw_items = discussion_candidates.get("discussion_ideas") or discussion_candidates.get("discussion_candidates") or []
+        candidate_list = [item for item in raw_items if isinstance(item, dict)]
 
     if has_section and body.strip() and not candidate_list:
         issues.append("The Further Discussion section contains claims but no discussion candidates back it.")
@@ -590,6 +609,7 @@ def main() -> int:
     parser.add_argument("--output-json")
     parser.add_argument("--evidence-plan")
     parser.add_argument("--discussion-candidates")
+    parser.add_argument("--body-scaffold")
     args = parser.parse_args()
 
     tex_path = Path(args.tex)
@@ -605,7 +625,8 @@ def main() -> int:
     unreferenced_principle_labels = find_unreferenced_principle_labels(tex_text)
     abstract_summary = abstract_checks(tex_text)
     catalogue_summary = catalogue_checks(tex_text)
-    discussion_summary = discussion_checks(tex_text)
+    body_scaffold = read_json(Path(args.body_scaffold)) if args.body_scaffold else None
+    discussion_summary = discussion_checks(tex_text, body_scaffold if isinstance(body_scaffold, dict) else None)
     evidence_plan = read_json(Path(args.evidence_plan)) if args.evidence_plan else None
     discussion_candidates = read_json(Path(args.discussion_candidates)) if args.discussion_candidates else None
     evidence_summary = evidence_placement_checks(tex_text, evidence_plan if isinstance(evidence_plan, dict) else None)

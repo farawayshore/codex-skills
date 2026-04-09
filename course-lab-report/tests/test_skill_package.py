@@ -53,9 +53,7 @@ class TestCourseLabReportPackageSkeleton(unittest.TestCase):
         self.assertIn("orchestrator", skill_text)
         self.assertIn("coordination-first", skill_text)
         self.assertIn("course-lab-run-plan", skill_text)
-        self.assertIn("modern-physics-latex-report-rennovated", skill_text)
-        self.assertIn("legacy", skill_text)
-        self.assertIn("must not rely on that folder at runtime", skill_text)
+        self.assertNotIn("modern-physics-latex-report-rennovated", skill_text)
         self.assertIn("should stay compact", skill_text)
         self.assertIn("orchestrator", agent_text.lower())
 
@@ -190,6 +188,36 @@ class TestCourseLabReportPackageSkeleton(unittest.TestCase):
                     [skill_text, orchestration_text, recovery_text, matrix_text]
                 )
                 self.assertIn(snippet, joined)
+
+    def test_parent_skill_requires_freshness_and_source_coverage_contracts(self) -> None:
+        skill_text = (PACKAGE_ROOT / "SKILL.md").read_text(encoding="utf-8")
+        orchestration_text = (PACKAGE_ROOT / "references" / "orchestration_rules.md").read_text(
+            encoding="utf-8"
+        )
+        data_transfer_text = Path(
+            "/root/.codex/skills/course-lab-data-transfer/SKILL.md"
+        ).read_text(encoding="utf-8")
+        joined = "\n".join([skill_text, orchestration_text, data_transfer_text])
+        expected_snippets = [
+            "newer than the workspace section summaries",
+            "rerun handout normalization before downstream theory or scaffold stages",
+            "course_lab_report_state.json",
+            "companion scan sources such as data.pdf",
+            "data transfer is incomplete until those sources are transferred or explicitly marked unresolved",
+        ]
+        for snippet in expected_snippets:
+            with self.subTest(snippet=snippet):
+                self.assertIn(snippet, joined)
+
+    def test_no_installed_rennovated_skill_directories_remain(self) -> None:
+        self.assertFalse(
+            Path("/root/.codex/skills/modern-physics-latex-report-rennovated").exists()
+        )
+        self.assertFalse(
+            Path(
+                "/root/.codex/skills/modern-physics-latex-report-rennovated-backup-20260324_225026"
+            ).exists()
+        )
 
 
 if __name__ == "__main__":

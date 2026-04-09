@@ -5,6 +5,7 @@
 - Required inputs: course name, experiment query, repo layout.
 - Emits: confirmed experiment target, handout/reference/template/result-folder selections.
 - Emits: `selected_reference_reports` and `reference_selection_status` for same-experiment reference selection when final QC will compare against reference procedures.
+- Emits: selected-reference dict entries that preserve `pdf_path`, `expected_decoded_markdown_path`, and `expected_decoded_json_path`; plain strings are malformed.
 - Delegation preference: Prefer Inline / Main Agent.
 - QC reroute ownership: weak discovery confirmation or wrong upstream selection.
 - QC reroute ownership: malformed same-experiment reference selection or ambiguous finalize-QC reference bundle.
@@ -17,6 +18,7 @@
 - Emits: normalized section JSON and Markdown.
 - Delegation preference: Prefer Small Worker.
 - QC reroute ownership: missing persistent decoded handout artifacts or malformed normalized handout structure.
+- QC reroute ownership: workspace section summaries that went stale after newer persistent decoded handout artifacts arrived.
 - QC reroute ownership: selected same-experiment reference reports that still lack decoded Markdown for the finalize-QC detector.
 - Does not own: workspace setup, later prose writing.
 
@@ -64,10 +66,11 @@
 
 ## course-lab-data-transfer
 - Invoke when: raw data sources must be transcribed into stable report-side artifacts.
-- Required inputs: matched raw data sources and canonical workspace.
+- Required inputs: matched raw data sources, companion scan sources such as data.pdf when they exist, and canonical workspace.
 - Emits: transferred data markdown and visible ambiguities for user review.
 - Delegation preference: Prefer Small Worker.
 - QC reroute ownership: missing raw records or transfer omissions discovered later.
+- QC reroute ownership: source-coverage gaps when companion scan sources such as data.pdf, record-book scans, or source images were not transferred or explicitly marked unresolved.
 - Does not own: computation, uncertainty math, interpretation prose.
 
 ## course-lab-data-processing
@@ -111,6 +114,7 @@
 - Invoke when: stable interpretation artifacts need discussion directions before synthesis.
 - Required inputs: interpretation artifacts and matched reference-report paths.
 - Emits: discussion-idea artifacts and synthesis-input candidates.
+- Optional skip note: this leaf may be recorded under `skipped_optional_leaves` only when `reference_selection_status` is `none_found`.
 - Delegation preference: Explicit Stay-Local.
 - QC reroute ownership: weak discussion direction coverage or missing beyond-handout ideas.
 - Does not own: final harmonized discussion prose, report mutation outside its handoff artifacts.
@@ -119,6 +123,7 @@
 - Invoke when: approved or retained discussion directions must be harmonized before final staging.
 - Required inputs: discussion-idea handoff artifacts and interpretation support.
 - Emits: synthesized discussion artifacts for final staging.
+- Optional skip note: this leaf may be recorded under `skipped_optional_leaves` only when `reference_selection_status` is `none_found`.
 - Delegation preference: Explicit Stay-Local.
 - QC reroute ownership: weak harmonization or confidence-calibration across retained discussion material.
 - Does not own: direct final QC, figure placement, raw idea generation.

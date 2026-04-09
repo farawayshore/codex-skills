@@ -46,7 +46,7 @@ python3 /root/.codex/skills/course-lab-experiment-principle/scripts/stage_princi
   --output-dir "/path/to/results/<experiment>/principle-images" \
   --output-tex "/path/to/results/<experiment>/principle_figures.tex" \
   --output-json "/path/to/results/<experiment>/principle_figures.json" \
-  --sections-json "/path/to/results/<experiment>/sections.json"
+  --sections-json "/path/to/results/<experiment>/notes/sections.json"
 ```
 
 Write the owned sections directly into the canonical report:
@@ -54,7 +54,7 @@ Write the owned sections directly into the canonical report:
 ```bash
 python3 /root/.codex/skills/course-lab-experiment-principle/scripts/write_experiment_principle.py \
   --sections-markdown "/path/to/results/<experiment>/notes/sections.md" \
-  --sections-json "/path/to/results/<experiment>/sections.json" \
+  --sections-json "/path/to/results/<experiment>/notes/sections.json" \
   --report-tex "/path/to/results/<experiment>/main.tex" \
   --figures-json "/path/to/results/<experiment>/principle_figures.json" \
   --output-json "/path/to/results/<experiment>/principle_ownership.json" \

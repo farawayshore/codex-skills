@@ -507,7 +507,11 @@ def picture_result_dir_candidates(query: str, max_results: int) -> list[dict[str
 
 
 def is_simulation_file(path: Path) -> bool:
-    return path.is_file() and path.suffix.lower() in SIMULATION_FILE_SUFFIXES
+    return (
+        path.is_file()
+        and path.suffix.lower() in SIMULATION_FILE_SUFFIXES
+        and path_contains_simulation_hint(path)
+    )
 
 
 def path_contains_simulation_hint(path: Path) -> bool:

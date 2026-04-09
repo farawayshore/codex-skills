@@ -52,3 +52,10 @@ class CourseLabRunPlanPackageTests(unittest.TestCase):
         self.assertIn("markdown", text.lower())
         self.assertIn("do not", text.lower())
         self.assertIn("tex", text.lower())
+
+    def test_skill_uses_workspace_notes_sections_contract(self) -> None:
+        text = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("/path/to/results/<experiment>/notes/sections.json", text)
+        self.assertIn("/path/to/results/<experiment>/notes/sections.md", text)
+        self.assertIn("course-lab-body-scaffold", text)
+        self.assertIn("course-lab-experiment-principle", text)

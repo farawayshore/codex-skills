@@ -56,7 +56,11 @@ def clean_caption(caption_items: list[str], fallback_name: str) -> str:
 
 def load_sections(decoded_json: Path, sections_json: Path | None) -> dict[str, object]:
     if sections_json and sections_json.exists():
-        return json.loads(sections_json.read_text(encoding="utf-8"))
+        try:
+            if sections_json.stat().st_mtime >= decoded_json.stat().st_mtime:
+                return json.loads(sections_json.read_text(encoding="utf-8"))
+        except OSError:
+            pass
     return build_summary(load_blocks(decoded_json))
 
 

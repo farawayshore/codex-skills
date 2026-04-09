@@ -1,4 +1,0 @@
-interface:
-  display_name: "Modern Physics LaTeX Report"
-  short_description: "Build Modern Physics lab reports"
-  default_prompt: "Use $modern-physics-latex-report to build or refine a Modern Physics LaTeX lab report from local handouts, data, and reference PDFs."

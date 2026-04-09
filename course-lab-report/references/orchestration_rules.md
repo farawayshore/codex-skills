@@ -32,12 +32,14 @@ Keep it focused on routing and prerequisites rather than leaf internals.
 - `course-lab-handout-normalization` must complete before `course-lab-run-plan`, `course-lab-body-scaffold`, and `course-lab-experiment-principle`.
 - `course-lab-handout-normalization` must leave persistent decoded handout artifacts at `AI_works/resources/experiment_handout/Modern Physics Experiments/pdf_decoded/<experiment-name>/<experiment-name>.md` and `AI_works/resources/experiment_handout/Modern Physics Experiments/pdf_decoded/<experiment-name>/<experiment-name>.json`.
 - The parent must not treat summary-only handout artifacts as proof that handout normalization completed.
-- `handout_extract.md`, `notes/sections.md`, and `sections.json` are useful downstream summaries, but they do not replace the persistent decoded handout artifacts above.
+- `handout_extract.md`, `notes/sections.md`, and `notes/sections.json` are useful downstream summaries, but they do not replace the persistent decoded handout artifacts above.
+- If the persistent decoded handout artifacts are newer than the workspace section summaries, the parent must rerun handout normalization before downstream theory or scaffold stages, then rerun `course-lab-run-plan` before downstream theory or scaffold stages continue.
 - `course-lab-experiment-principle` must emit `principle_ownership.json` before downstream stages may treat the theory-facing section ownership as settled.
 - When handout-derived theory-image staging is available or attempted, `course-lab-experiment-principle` must emit `principle_figures.json` and `principle_figures.tex`.
 - When theory-image staging is weak, absent, or ambiguous, `course-lab-experiment-principle` must emit `principle_unresolved.md`.
 - `course-lab-workspace-template` and `course-lab-metadata-frontmatter` must establish the canonical workspace before later draft-mutating stages.
 - `course-lab-data-transfer` must pause for user confirmation before `course-lab-data-processing` or `course-lab-uncertainty-analysis`.
+- When discovery exposes companion scan sources such as data.pdf, record-book scans, or source images inside the selected data group, data transfer is incomplete until those sources are transferred or explicitly marked unresolved.
 - `course-lab-data-processing` must stabilize processed artifacts before `course-lab-uncertainty-analysis`, `course-lab-plotting`, and `course-lab-results-interpretation`.
 - `course-lab-results-interpretation` must stabilize interpretation artifacts before `course-lab-discussion-ideas`, `course-lab-discussion-synthesis`, and `course-lab-final-staging`.
 - `course-lab-final-staging` must finish before `course-lab-figure-evidence` and `course-lab-finalize-qc`.
@@ -83,16 +85,20 @@ The parent should keep one workspace-local controller-state artifact:
 
 `AI_works/results/<experiment-safe-name>/course_lab_report_state.json`
 
+The parent must not claim completion when `course_lab_report_state.json` is absent.
+
 It should record:
 
 - confirmed discovery selections
 - canonical workspace and TeX target
-- stage completion status with emitted artifact paths
+- stage completion status with emitted artifact paths and stage artifact paths
+- `skipped_optional_leaves`
 - `agent_proposed_key_results` and each proposal confirmation state
 - stable evidence-plan state
 - late-stage ownership log
 - last mutating leaf for each owned late-stage region or bucket
 - rerun history and the reason for each reroute
+- `reference_selection_status`, including the neutral `none_found` state
 
 ## Proposal Reroute Loop
 

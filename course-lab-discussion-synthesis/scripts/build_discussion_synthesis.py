@@ -46,6 +46,24 @@ def load_approved_input(path: Path) -> dict[str, object]:
     return payload
 
 
+def load_synthesis_input(path: Path) -> dict[str, object]:
+    require_existing(path, label="synthesis-input-json")
+    payload = read_json(path)
+    if not isinstance(payload, dict):
+        raise SystemExit("approval required: synthesis input must be approved before course-lab-discussion-synthesis runs")
+
+    approval_mode = str(payload.get("approval_mode") or "").strip().lower()
+    if approval_mode == "synthesis_judgment":
+        ideas = [item for item in payload.get("discussion_ideas", []) if isinstance(item, dict)]
+        if not ideas:
+            raise SystemExit("synthesis judgment input must include discussion_ideas")
+        payload["approval_status"] = "approved"
+        payload["approved_idea_ids"] = [str(item.get("idea_id")) for item in ideas if item.get("idea_id")]
+        return payload
+
+    return load_approved_input(path)
+
+
 def load_reference_reports(reference_paths: list[str]) -> list[dict[str, object]]:
     reports: list[dict[str, object]] = []
     for raw_path in reference_paths:
@@ -254,7 +272,7 @@ def main() -> int:
     args = parser.parse_args()
 
     synthesis_input_path = Path(args.synthesis_input_json)
-    synthesis_input = load_approved_input(synthesis_input_path)
+    synthesis_input = load_synthesis_input(synthesis_input_path)
     reference_reports = load_reference_reports(args.reference_report)
 
     prior_synthesis_path = Path(args.prior_synthesis_json) if args.prior_synthesis_json else None

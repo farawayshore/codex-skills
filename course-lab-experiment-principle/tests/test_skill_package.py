@@ -38,6 +38,12 @@ class CourseLabExperimentPrinciplePackageTests(unittest.TestCase):
         self.assertIn("json", text.lower())
         self.assertNotIn("modern-physics-latex-report-rennovated", text)
 
+    def test_skill_uses_workspace_notes_sections_contract(self) -> None:
+        text = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("/path/to/results/<experiment>/notes/sections.md", text)
+        self.assertIn("/path/to/results/<experiment>/notes/sections.json", text)
+        self.assertIn("markdown first", text.lower())
+
 
 if __name__ == "__main__":
     unittest.main()

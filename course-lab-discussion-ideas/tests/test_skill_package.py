@@ -5,7 +5,7 @@ from pathlib import Path
 
 
 SKILL_DIR = Path("/root/.codex/skills/course-lab-discussion-ideas")
-PARENT_SKILL_PATH = Path("/root/.codex/skills/modern-physics-latex-report-rennovated/SKILL.md")
+PARENT_SKILL_PATH = Path("/root/.codex/skills/course-lab-report/SKILL.md")
 
 
 class CourseLabDiscussionIdeasPackageTests(unittest.TestCase):
@@ -45,6 +45,8 @@ class CourseLabDiscussionIdeasPackageTests(unittest.TestCase):
         self.assertIn("routine theory", text.lower())
         self.assertIn("discussion_synthesis_input.tmp.json", text)
         self.assertIn("synthesis judgment", text.lower())
+        self.assertIn("discussion_ideas", text)
+        self.assertIn("none_found", text.lower())
         self.assertIn("do not", text.lower())
         self.assertNotIn("user approval", text.lower())
         self.assertNotIn("modern-physics-latex-report-rennovated/scripts", text)
@@ -69,6 +71,7 @@ class CourseLabDiscussionIdeasPackageTests(unittest.TestCase):
         self.assertIn("do not mutate", text.lower())
         self.assertIn("final harmonized discussion", text.lower())
         self.assertIn("synthesis judgment", text.lower())
+        self.assertIn("none_found", text.lower())
         self.assertNotIn("user approval", text.lower())
 
     def test_parent_skill_mentions_discussion_ideas_subskill(self) -> None:
@@ -76,7 +79,7 @@ class CourseLabDiscussionIdeasPackageTests(unittest.TestCase):
 
         text = PARENT_SKILL_PATH.read_text(encoding="utf-8")
 
-        self.assertIn("$course-lab-discussion-ideas", text)
+        self.assertIn("`course-lab-discussion-ideas`", text)
 
 
 if __name__ == "__main__":

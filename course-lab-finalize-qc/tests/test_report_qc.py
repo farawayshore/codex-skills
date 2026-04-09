@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import json
+import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -164,6 +166,80 @@ The result is good and basically matches the experiment.
         self.assertTrue(any("error sources or limitations" in issue for issue in summary["discussion_issues"]))
         self.assertTrue(any("literature support or citations" in issue for issue in summary["discussion_issues"]))
 
+    def test_report_qc_flags_missing_assigned_thinking_questions_when_scaffold_requires_them(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            tex_path = root / "report.tex"
+            procedures_path = root / "procedures.md"
+            scaffold_path = root / "body_scaffold.json"
+            output_markdown = root / "report_qc.md"
+            output_json = root / "report_qc.json"
+
+            tex_path.write_text(
+                "\n".join(
+                    [
+                        r"\documentclass[twocolumn]{article}",
+                        r"\usepackage[hidelinks]{hyperref}",
+                        r"\begin{document}",
+                        r"\begin{abstract}",
+                        r"This report summarizes the measured optical behavior and the verified discussion.",
+                        r"\end{abstract}",
+                        r"\keywords{optics}",
+                        r"\tableofcontents",
+                        r"\section{Introduction}",
+                        r"P01 is covered here.",
+                        r"\section{Experiment Discussion}",
+                        r"The result is partially reliable because it is consistent with the theoretical expectation and literature discussion.\cite{opticspaper}",
+                        r"The deviation is mainly caused by alignment error and instrument uncertainty.",
+                        r"Further improvement would come from repeated measurements and better alignment.",
+                        r"\end{document}",
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            procedures_path.write_text("- P01 Record the main observation.\n", encoding="utf-8")
+            scaffold_path.write_text(
+                json.dumps(
+                    {
+                        "scaffold_sections": [
+                            {
+                                "heading": "Experiment Discussion",
+                                "source_key": "thinking_questions",
+                                "thinking_questions": ["1. 为什么会出现倍频失真？"],
+                            }
+                        ]
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPT_DIR / "report_qc.py"),
+                    "--tex",
+                    str(tex_path),
+                    "--procedures",
+                    str(procedures_path),
+                    "--body-scaffold",
+                    str(scaffold_path),
+                    "--output-markdown",
+                    str(output_markdown),
+                    "--output-json",
+                    str(output_json),
+                ],
+                check=False,
+            )
+
+            payload = json.loads(output_json.read_text(encoding="utf-8"))
+            self.assertTrue(
+                any("Assigned Thinking Questions" in issue for issue in payload["discussion_issues"])
+            )
+
     def test_compact_spacing_checks_flag_command_padding_and_multiple_blank_lines(self) -> None:
         tex_text = r"""
 \title{A}
@@ -212,6 +288,18 @@ This clearly proves the mystery image shows the true optical behavior.
 """
         discussion_candidates = {"discussion_candidates": [load_json_fixture("sample_discussion_candidates.json")["discussion_candidates"][1]]}
         summary = further_discussion_checks(tex_text, load_json_fixture("sample_evidence_plan.json"), discussion_candidates)
+        self.assertTrue(any("too strong for low-confidence" in issue for issue in summary["further_discussion_issues"]))
+
+    def test_further_discussion_checks_accept_discussion_ideas_payload(self) -> None:
+        tex_text = r"""
+\section{Further Discussion}
+This clearly proves the mystery image shows the true optical behavior.
+"""
+        summary = further_discussion_checks(
+            tex_text,
+            load_json_fixture("sample_evidence_plan.json"),
+            {"discussion_ideas": [load_json_fixture("sample_discussion_candidates.json")["discussion_candidates"][1]]},
+        )
         self.assertTrue(any("too strong for low-confidence" in issue for issue in summary["further_discussion_issues"]))
 
     def test_further_discussion_checks_flag_missing_candidates_for_anomaly_and_ambiguity_signals(self) -> None:

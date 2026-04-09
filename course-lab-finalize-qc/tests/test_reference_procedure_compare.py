@@ -91,6 +91,48 @@ class ReferenceProcedureCompareTests(unittest.TestCase):
             self.assertTrue(summary["blocked"])
             self.assertEqual(summary["recommended_reroutes"][0]["target_skill"], "course-lab-discovery")
 
+    def test_none_found_reference_selection_disables_comparison_lane(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            main_tex = root / "main.tex"
+            main_tex.write_text("\\section{实验结果}\n", encoding="utf-8")
+            discovery = root / "discovery.json"
+            write_json(
+                discovery,
+                {
+                    "reference_selection_status": "none_found",
+                    "selected_reference_reports": [],
+                },
+            )
+
+            summary = compare_reference_procedure_coverage(main_tex=main_tex, discovery_json=discovery)
+
+            self.assertFalse(summary["enabled"])
+            self.assertTrue(summary["pass"])
+            self.assertFalse(summary["blocked"])
+            self.assertEqual(summary["recommended_reroutes"], [])
+
+    def test_plain_string_selected_reference_entry_is_blocking_malformed_contract(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            main_tex = root / "main.tex"
+            main_tex.write_text("\\section{实验结果}\n", encoding="utf-8")
+            discovery = root / "discovery.json"
+            write_json(
+                discovery,
+                {
+                    "reference_selection_status": "selected",
+                    "selected_reference_reports": [str(root / "279964_sysut_23355030 贾儒恺 电光调制.pdf")],
+                },
+            )
+
+            summary = compare_reference_procedure_coverage(main_tex=main_tex, discovery_json=discovery)
+
+            self.assertFalse(summary["pass"])
+            self.assertTrue(summary["blocked"])
+            self.assertEqual(summary["blocked_reference_decode_items"][0]["reason_code"], "malformed-discovery-contract")
+            self.assertEqual(summary["recommended_reroutes"][0]["target_skill"], "course-lab-discovery")
+
     def test_missing_heading_lane_reroutes_to_body_scaffold(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)

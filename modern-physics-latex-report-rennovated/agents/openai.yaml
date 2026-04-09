@@ -1,4 +1,0 @@
-interface:
-  display_name: "Course Lab Report"
-  short_description: "Build course lab reports"
-  default_prompt: "Use $course-lab-report to build or refine a course lab report from local handouts, data, and reference PDFs in the current AI_works workspace."

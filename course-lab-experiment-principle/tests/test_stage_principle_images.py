@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -20,7 +21,8 @@ class StagePrincipleImagesTests(unittest.TestCase):
             root = Path(temp_name)
             decoded_dir = root / "pdf_decoded" / "sample"
             (decoded_dir / "images").mkdir(parents=True, exist_ok=True)
-            shutil.copy2(FIXTURES / "sample_mineru.json", decoded_dir / "sample.json")
+            decoded_json = decoded_dir / "sample.json"
+            shutil.copy2(FIXTURES / "sample_mineru.json", decoded_json)
             shutil.copy2(FIXTURES / "principle.jpg", decoded_dir / "images" / "principle.jpg")
 
             out_dir = root / "results" / "sample" / "principle-images"
@@ -226,6 +228,49 @@ class StagePrincipleImagesTests(unittest.TestCase):
             tex = out_tex.read_text(encoding="utf-8")
             self.assertIn(r"\NeedsInput{Pending picture grouping decision:", tex)
             self.assertNotIn("User confirmation required", tex)
+
+    def test_stale_sections_json_is_ignored_when_decoded_json_is_newer(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_name:
+            root = Path(temp_name)
+            decoded_dir = root / "pdf_decoded" / "sample"
+            (decoded_dir / "images").mkdir(parents=True, exist_ok=True)
+            decoded_json = decoded_dir / "sample.json"
+            shutil.copy2(FIXTURES / "sample_mineru.json", decoded_json)
+            shutil.copy2(FIXTURES / "principle.jpg", decoded_dir / "images" / "principle.jpg")
+
+            stale_sections = root / "results" / "sample" / "sections.json"
+            stale_sections.parent.mkdir(parents=True, exist_ok=True)
+            stale_sections.write_text(
+                json.dumps({"sections": {"principle": {"images": []}}}, ensure_ascii=False),
+                encoding="utf-8",
+            )
+            fresher_timestamp = stale_sections.stat().st_mtime + 5
+            os.utime(decoded_json, (fresher_timestamp, fresher_timestamp))
+
+            out_dir = root / "results" / "sample" / "principle-images"
+            out_tex = root / "results" / "sample" / "principle_figures.tex"
+            out_json = root / "results" / "sample" / "principle_figures.json"
+
+            subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPT_DIR / "stage_principle_images.py"),
+                    "--decoded-json",
+                    str(decoded_json),
+                    "--sections-json",
+                    str(stale_sections),
+                    "--output-dir",
+                    str(out_dir),
+                    "--output-tex",
+                    str(out_tex),
+                    "--output-json",
+                    str(out_json),
+                ],
+                check=True,
+            )
+
+            manifest = json.loads(out_json.read_text(encoding="utf-8"))
+            self.assertEqual(manifest["principle_image_count"], 1)
 
 
 if __name__ == "__main__":

@@ -20,6 +20,18 @@ class CourseLabDiscoveryPackageTests(unittest.TestCase):
             self.assertIn("reference_selection_status", text)
             self.assertIn("does not decode", text.lower())
 
+    def test_docs_require_full_selected_reference_entry_shape(self) -> None:
+        text = "\n".join(
+            [
+                (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8"),
+                (SKILL_DIR / "agents" / "openai.yaml").read_text(encoding="utf-8"),
+            ]
+        )
+        self.assertIn("expected_decoded_markdown_path", text)
+        self.assertIn("expected_decoded_json_path", text)
+        self.assertIn("must not collapse", text.lower())
+        self.assertIn("plain strings", text.lower())
+
 
 if __name__ == "__main__":
     unittest.main()

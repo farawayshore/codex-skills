@@ -5,7 +5,7 @@ from pathlib import Path
 
 
 SKILL_DIR = Path(__file__).resolve().parents[1]
-PARENT_SKILL_PATH = Path("/root/.codex/skills/modern-physics-latex-report-rennovated/SKILL.md")
+PARENT_SKILL_PATH = Path("/root/.codex/skills/course-lab-report/SKILL.md")
 
 
 class CourseLabDiscussionSynthesisPackageTests(unittest.TestCase):
@@ -33,6 +33,8 @@ class CourseLabDiscussionSynthesisPackageTests(unittest.TestCase):
         )
         self.assertIn("artifact-only", text.lower())
         self.assertIn("approved", text.lower())
+        self.assertIn("discussion_ideas", text)
+        self.assertIn("synthesis_judgment", text.lower())
         self.assertIn("reference report", text.lower())
         self.assertIn("first accepted-ideas", text.lower())
         self.assertIn("targeted", text.lower())
@@ -47,6 +49,7 @@ class CourseLabDiscussionSynthesisPackageTests(unittest.TestCase):
         text = agent_path.read_text(encoding="utf-8")
 
         self.assertIn("approved", text.lower())
+        self.assertIn("synthesis_judgment", text.lower())
         self.assertIn("reference report", text.lower())
         self.assertIn("first", text.lower())
         self.assertIn("targeted", text.lower())
@@ -60,7 +63,7 @@ class CourseLabDiscussionSynthesisPackageTests(unittest.TestCase):
 
         text = PARENT_SKILL_PATH.read_text(encoding="utf-8")
 
-        self.assertIn("$course-lab-discussion-synthesis", text)
+        self.assertIn("`course-lab-discussion-synthesis`", text)
 
 
 if __name__ == "__main__":

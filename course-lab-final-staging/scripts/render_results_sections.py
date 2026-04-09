@@ -436,6 +436,21 @@ def _result_key(item: dict[str, object]) -> str:
     return str(item.get("name") or item.get("key") or item.get("canonical_key") or "").strip()
 
 
+def _scaffold_thinking_questions(body_scaffold: dict[str, object] | None) -> list[str]:
+    if not isinstance(body_scaffold, dict):
+        return []
+
+    questions: list[str] = []
+    for section in body_scaffold.get("scaffold_sections", []):
+        if not isinstance(section, dict):
+            continue
+        for item in section.get("thinking_questions", []) or []:
+            text = str(item).strip()
+            if text:
+                questions.append(text)
+    return questions
+
+
 def _has_embedded_procedure_detail(item: dict[str, object]) -> bool:
     for field_name in (
         "procedure_tex",
@@ -903,7 +918,7 @@ def render_results_sections(payload: dict[str, object]) -> dict[str, object]:
     )
     process_lines.extend(_uncertainty_definition_lines(has_uncertainty_support))
 
-    results_lines = [r"\subsection{Direct And Indirect Results}", ""]
+    results_lines: list[str] = []
     case_records: list[dict[str, object]] = []
     for case in cases:
         title = latex_escape(str(case.get("title") or case.get("case_id") or "Case"))
@@ -1013,7 +1028,15 @@ def render_results_sections(payload: dict[str, object]) -> dict[str, object]:
             results_lines.append(line)
         results_lines.append("")
 
-    discussion_lines = [r"\subsection{Synthesized Discussion}", ""]
+    questions = _scaffold_thinking_questions(payload.get("body_scaffold"))
+    discussion_lines: list[str] = []
+    if questions:
+        discussion_lines.extend([r"\subsection{Assigned Thinking Questions}", "", r"\begin{enumerate}"])
+        for question in questions:
+            discussion_lines.append(rf"  \item {latex_escape(question)}")
+        discussion_lines.extend([r"\end{enumerate}", ""])
+
+    discussion_lines.extend([r"\subsection{Synthesized Discussion}", ""])
     for block in discussion_payload.get("discussion_blocks", []):
         if not isinstance(block, dict):
             continue

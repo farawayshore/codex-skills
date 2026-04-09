@@ -24,7 +24,7 @@ Do not use this skill to choose the experiment, decode PDFs, mutate TeX, perform
 ## Output Contract
 
 - Use local `/root/.codex/skills/course-lab-run-plan/scripts/build_run_plan.py` as the canonical run-plan builder.
-- Feed it normalized section JSON plus normalized section Markdown.
+- Feed it workspace-local normalized section JSON plus workspace-local normalized section Markdown from `/path/to/results/<experiment>/notes/sections.json` and `/path/to/results/<experiment>/notes/sections.md`.
 - Emit two aligned workspace-local artifacts:
   - `AI_works/results/<experiment-safe-name>/<experiment-safe-name>_run_plan.json`
   - `AI_works/results/<experiment-safe-name>/<experiment-safe-name>_run_plan.md`
@@ -38,8 +38,8 @@ Do not use this skill to choose the experiment, decode PDFs, mutate TeX, perform
 
 ```bash
 python3 /root/.codex/skills/course-lab-run-plan/scripts/build_run_plan.py \
-  --sections-json "/path/to/results/<experiment>/sections.json" \
-  --sections-markdown "/path/to/results/<experiment>/sections.md" \
+  --sections-json "/path/to/results/<experiment>/notes/sections.json" \
+  --sections-markdown "/path/to/results/<experiment>/notes/sections.md" \
   --workspace "/path/to/results/<experiment>" \
   --experiment-name "Interference Lab" \
   --experiment-safe-name "interference_lab" \
@@ -51,7 +51,7 @@ python3 /root/.codex/skills/course-lab-run-plan/scripts/build_run_plan.py \
 
 ## Workflow
 
-1. Confirm that normalized handout JSON and Markdown already exist.
+1. Confirm that normalized handout JSON and Markdown already exist at `/path/to/results/<experiment>/notes/sections.json` and `/path/to/results/<experiment>/notes/sections.md`.
 2. Read `references/run_plan_rules.md` before deciding how to route handout cues.
 3. Run `scripts/build_run_plan.py` with the normalized inputs and the target workspace path.
 4. Review `run_readiness`, `leaf_skill_handoffs`, `comparison_obligations`, and `global_unresolved_gaps` in the JSON output.

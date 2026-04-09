@@ -274,6 +274,7 @@ class BuildDiscussionIdeasTests(unittest.TestCase):
             self.assertTrue(
                 all(item["approval_status"] == "pending_synthesis_judgment" for item in synthesis_payload["discussion_ideas"])
             )
+            self.assertEqual(synthesis_payload["approval_mode"], "synthesis_judgment")
             self.assertIn("approval status: pending_synthesis_judgment", synthesis_markdown)
             self.assertIn("approval basis:", synthesis_markdown)
 
