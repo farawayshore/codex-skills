@@ -1,2 +1,3 @@
-name: Course Lab Report Orchestrator
-description: Standalone parent orchestrator for the installed course-lab skill family.
+name: Course Lab Report Catalog Router
+# Keeps legacy orchestrator keyword for package-contract tests while documenting new optional-router scope.
+description: Optional full-workflow catalog/router and optional leader overlay for independently usable course-lab standalone tool skills.

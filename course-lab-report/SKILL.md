@@ -1,21 +1,22 @@
 ---
 name: course-lab-report
-description: Use when a course lab-report run needs a standalone parent orchestrator that routes installed leaf skills through explicit stage gates, delegation rules, and QC recovery without re-embedding sibling runtime logic.
+description: Use when a full course lab-report run needs an optional catalog/router over standalone course-lab tools, with explicit stage gates, delegation rules, and QC recovery.
 ---
 
 # Course Lab Report
 
 ## Overview
 
-Use this skill as the standalone parent orchestrator for the installed course-lab skill family.
+Use this skill as the optional full-workflow catalog/router for the installed course-lab skill family. It remains an orchestrator for complete report runs, but leaf tools remain independently usable and this parent is not required for standalone leaf-tool use.
 
-This package is coordination-first. It should stay compact, route work to the installed leaf skills, and avoid re-embedding sibling runtime logic that already belongs in those leaf packages.
+This package is coordination-first. It should stay compact, route work to the installed standalone leaf tools, and avoid re-embedding sibling runtime logic that already belongs in those leaf packages. controller-state requirements apply only to full-report orchestration; standalone leaf-tool calls should instead use each leaf skill's own `## Standalone Tool Contract` inputs, outputs, validation, and failure signals.
 
 ## When To Use
 
-- A course lab-report run needs one parent controller rather than a monolithic executor.
+- A full course lab-report run needs one optional parent controller rather than a monolithic executor.
+- A caller needs a catalog that maps independently usable leaf tools into full-report stage order.
 - The workflow should move through explicit stage gates, stop points, delegation rules, and QC reroutes.
-- Installed leaf skills should keep their own execution logic while this parent chooses what happens next.
+- Installed leaf skills should keep their own standalone execution logic while this parent chooses what happens next only for complete report orchestration.
 
 ## Default Stage Order
 
@@ -41,7 +42,30 @@ This package is coordination-first. It should stay compact, route work to the in
 
 - `course-lab-symbolic-expressing`: optional result-explanation helper that reads explicit handout, calculation-code, processed-result, result-key, and output paths, then returns a temp TeX path plus unresolved notes to the caller. It is not a required stage between `course-lab-data-processing` and `course-lab-final-staging`.
 
+## Standalone Tool Catalog Mode
+
+`course-lab-report` is an optional full-workflow catalog/router, not a prerequisite for using the leaf skills. Each installed leaf skill can be invoked independently through its own `## Standalone Tool Contract` section. In standalone mode, callers pass that leaf's minimum inputs directly, inspect its declared outputs, run its validation steps, and handle failure signals locally.
+
+Use this parent only when a full report needs shared controller state, cross-tool reroutes, proposal confirmation, or final QC recovery across multiple leaves. The parent must not convert standalone tool failures into generic prose; it should preserve the leaf tool's precise missing-input or reroute signal.
+
+See:
+
+- `references/tool_catalog.md` for the standalone tool map.
+- `references/full_workflow_routing.md` for optional full-report orchestration state and reroutes.
+- `references/team_roster.md` for the optional team-overlay roster and stage ownership map.
+- `references/team_handoff_contract.md` for optional team-overlay ticket, handoff, and proposal-confirmation flow.
+- `references/examiner_rubric.md` for reusable QC/scoring dimensions.
+- `references/senior_advice_contract.md` for safe senior-style advice inputs and anti-invention rules.
+
+## Optional Team Overlay
+
+When a caller wants a coordinated multi-agent full-report run, this package may also act as a lightweight leader/controller overlay on top of the same standalone tool family. That overlay is optional. Standalone leaf-tool usage remains unchanged, no role label or native agent file becomes mandatory, and controller-state requirements still stay full-report-only.
+
+In that overlay, the leader/controller remains orchestration-only. It may own stage routing, controller-state updates, reroute tickets, proposal confirmation, and final stop/go decisions, but it must not become a prose-writing, numerical-computation, or direct QC-scoring lane.
+
 ## Parent-Only Responsibilities
+
+These responsibilities apply only when `course-lab-report` is coordinating a full report workflow. They do not make the parent required for standalone leaf-tool use.
 
 - Keep stage order and gate decisions visible.
 - Decide whether a step should stay inline, use a smaller worker, or stay local.
@@ -98,6 +122,12 @@ This package is coordination-first. It should stay compact, route work to the in
 
 ## References
 
+- `references/tool_catalog.md`
+- `references/full_workflow_routing.md`
+- `references/team_roster.md`
+- `references/team_handoff_contract.md`
+- `references/examiner_rubric.md`
+- `references/senior_advice_contract.md`
 - `references/orchestration_rules.md`
 - `references/delegation_policy.md`
 - `references/recovery_matrix.md`
