@@ -9,21 +9,79 @@ description: Use when a course lab-report run already has a staged draft from co
 
 Turn matched experiment-image sources into staged figure artifacts and placement decisions for an already assembled report draft without drifting into non-figure prose, plotting, or final QC decisions.
 
-This skill owns experiment picture-result staging, signatory-page staging, and report-facing evidence planning. It is standalone with local copied tools, so it should not reach back into the old `course-lab-report` folder.
+This skill owns experiment picture-result staging, signatory-page staging, and report-facing evidence planning. It is standalone with local copied tools, so it should not reach back into the old parent report-skill folder.
 
 When late-stage comparison artifacts exist, this skill should stage the paired simulation image assets and group them with the matching observed case evidence rather than planning only experiment-side photos.
 
-## When to Use
+## Standalone Tool Contract
 
-- The experiment is already confirmed.
-- `course-lab-final-staging` has already produced the staged draft that will receive late figure placement.
-- Matching picture-result folders or signatory-page folders are already known.
-- The assembled draft needs grouped experiment figures, manifests, or an evidence plan to support late picture placement after final staging.
-- The staged image pool may still need late-stage compression guidance before the final QC step.
+### Use Independently When
 
-Do not use this skill to choose the experiment, decode a new handout, transfer raw data, compute uncertainties, write interpretation prose, write discussion prose, or make final compile-and-QC decisions.
+- A staged report draft or evidence-planning target already exists and matched picture-result or signatory sources are known.
+- The caller needs picture-result staging, signatory-page staging, evidence-plan artifacts, or late figure placement guidance.
+- Paired observed/simulation comparison cases should be grouped from an explicit final-staging summary.
+- The task is figure/evidence focused and should not rewrite non-figure prose or take over final compile/QC decisions.
+- `course-lab-final-staging` already produced the staged draft, and `course-lab-experiment-principle` already owns handout-derived theory images for the early theory-facing sections.
 
-## Output Contract
+### Minimum Inputs
+
+- For picture-result staging: a matched `--source-root`, an `--output-dir`, and an `--output-json` manifest path.
+- For evidence planning: a `--manifest-json`, an `--output-json`, and an `--output-markdown`.
+- For signatory staging: a matched signatory `--source-root`, an output directory, an output manifest path, and an output TeX snippet path.
+- For direct late TeX mutation, an explicitly identified staged draft or canonical TeX target plus a validated evidence plan; artifact-only staging does not require TeX mutation authority.
+- When pairing observed/simulation cases, an explicit `--comparison-cases-json` such as `final_staging_summary.json`.
+
+### Optional Workflow Inputs
+
+- Final-staging summary fields that name safe result/discussion neighborhoods and normalized `comparison_cases`.
+- Discovery notes identifying representative picture-result folders and signatory-page folders.
+- Image-size measurements used to decide whether `$compress-png` should run before final QC.
+- Existing placement notes or `\NeedsInput{...}` markers from earlier figure attempts.
+
+### Procedure
+
+- Use only local scripts in `/root/.codex/skills/course-lab-figure-evidence/scripts/`.
+- Stage picture results and same-case comparison assets before planning placement.
+- Build the evidence plan from the manifest, then use that plan to decide any late figure TeX insertion.
+- Keep low-confidence grouping, missing captions, oversized images, and representative-subset choices visible.
+- Keep captions report-facing and avoid internal provenance wording such as `source archive`, `staged evidence set`, `source label`, `metadata`, or `evidence pool`.
+
+### Outputs
+
+- `picture_results_manifest.json` and staged image assets under the caller-provided output directory.
+- `picture_evidence_plan.json` and `picture_evidence_plan.md`.
+- Optional `signatory_pages_manifest.json`, `signatory_pages.tex`, and staged signatory images.
+- Optional TeX figure insertions or visible `\NeedsInput{...}` placeholders when late placement is explicitly requested and safe.
+- Compression guidance when the staged image pool threatens the `15 MB` coordination target.
+
+### Validation
+
+- Manifests refer only to staged local assets and preserve sequence/case grouping warnings.
+- Evidence-plan Markdown is suitable for report-facing placement review and does not masquerade as interpretation prose.
+- Any TeX mutation is limited to figure blocks near existing final-staging content and does not rewrite non-figure sections.
+- Captions avoid internal workflow/provenance language and use file-name stems or handout-grounded descriptions when formal captions are missing.
+- Local figure-evidence staging, planning, and signatory tests pass.
+
+### Failure / Reroute Signals
+
+- Missing picture-result or signatory source roots: stop in standalone mode with the missing path; in full-report mode, return a reroute hint to source discovery.
+- Ambiguous grouping or subsection mapping: emit warnings and `\NeedsInput{...}` placeholders instead of forcing a placement.
+- Missing or malformed comparison-case summary: continue with observed-only staging when safe and record the pairing gap.
+- PNG pool still too large after same-format compression attempts: ask for explicit user confirmation before converting to another format.
+
+### Non-Ownership
+
+- This tool does not choose the experiment, decode handouts, transfer raw data, compute uncertainties, write interpretation prose, synthesize discussion prose, or make final compile/QC decisions.
+- This tool does not reclaim handout-derived theory images already owned by `course-lab-experiment-principle`.
+- This tool does not convert PNG assets to JPEG or another format without explicit user confirmation.
+
+## Optional Workflow Metadata
+
+- Suggested future role label: `writer`.
+- Typical upstream tools: `course-lab-final-staging`, `course-lab-discovery`, `course-lab-experiment-principle`.
+- Typical downstream tools: `course-lab-finalize-qc`, `$compress-png` when same-format PNG compression is needed.
+
+## Workflow Notes
 
 - Use local `scripts/stage_picture_results.py` to copy experiment picture results into the report workspace and emit `picture_results_manifest.json`.
 - Use local `scripts/plan_picture_evidence.py` to convert the manifest into `picture_evidence_plan.json` and `picture_evidence_plan.md`.
@@ -110,7 +168,7 @@ python3 /root/.codex/skills/course-lab-figure-evidence/scripts/stage_signatory_p
 - This skill does not own non-figure prose writing.
 - This skill does not own final compile or QC decisions.
 - This skill does not own interpretation prose or discussion synthesis.
-- Keep parent-skill path dependencies out of the workflow. Use the copied local scripts in this folder instead of the old `course-lab-report` folder.
+- Keep parent-skill path dependencies out of the workflow. Use the copied local scripts in this folder instead of the old parent report-skill folder.
 - Preserve low-confidence mapping as warnings and placeholders instead of silently forcing a subsection or caption.
 - Do not let captions or placement notes sound like workflow logs. Prefer neutral lab-report naming based on the file name stem or the handout description.
 - Do not fold signatory pages into the scientific results discussion.

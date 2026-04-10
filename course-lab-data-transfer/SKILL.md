@@ -13,33 +13,53 @@ This skill is vision-first for PDF and image sources. Read the rendered pages fi
 
 When discovery or staged picture evidence shows subordinate experiment picture results, this skill also requires a second vision pass on those pictures before any transferred phenomenon description becomes final.
 
-## When to Use
+## Standalone Tool Contract
 
-- `course-lab-discovery` already found the relevant data files.
-- The experiment is confirmed and the run is ready to transfer raw data before uncertainty work or interpretation.
-- The source set includes CSV, TSV, TXT, XLS, XLSX, PDF, or image files.
-- Handwritten Chinese notes, qualitative observations, or partly legible comments must be preserved instead of normalized away.
-- The run needs a visible proofread gate before later analysis continues.
+### Use Independently When
+- Confirmed raw-data sources need page-level or file-level transcription into reviewable Markdown before calculations, uncertainty analysis, or interpretation.
+- Handwritten Chinese observation notes must be preserved with nearby English translations.
+- A visible user proofread gate is required before analysis continues.
 
-Do not use this skill to choose the experiment, decode a handout, compute results, judge anomalies, or draft final discussion prose.
+### Minimum Inputs
+- Raw data source path(s): CSV, TSV, TXT, XLS/XLSX, PDF, image, or picture-result folder.
+- Output destination for the transferred Markdown and any bundle manifest.
+- Experiment/source identity and any source-coverage expectations from handout, discovery, or run-plan artifacts.
 
-## Output Contract
+### Optional Workflow Inputs
+- Discovery JSON with `data_groups`, `other_files`, result directories, or picture-result candidates.
+- `picture_results_manifest.json` for visual corroboration of phenomena.
+- Normalized handout or scaffold procedure anchors for source-coverage mapping.
 
-- Use local `scripts/prepare_data_transfer_bundle.py` to create a standalone review bundle for each source.
-- Use local `scripts/build_transfer_draft.py` to create the first Markdown transfer draft from that bundle.
-- Save the final transferred Markdown as `<data-parent>/data_transferred/<experiment-safe-name>_data.md`.
-- For PDF sources, the review bundle should include:
-  - rendered page images for vision-first reading
-  - a located MinerU Markdown path when it exists
-  - a local PDF-to-text artifact for tie-breaking
-  - a bundle manifest JSON
-- When discovery or figure-evidence staging already found matching picture results, the review bundle should also include picture-result evidence paths and any rendered review images needed for vision inspection.
-- Keep Chinese notes in the original language first, then add the English translation immediately below or beside the original note.
-- Keep uncertainty local. If a digit, unit, symbol, or handwritten phrase is weak, mark that weakness in the transferred Markdown instead of silently choosing one interpretation.
-- If a transferred phenomenon description is not visibly supported by the matched picture-result evidence, keep it provisional or surface a question instead of treating it as final.
-- Stop after the transferred Markdown draft and explicitly ask the user to proofread it before calculations, uncertainty analysis, anomaly judgments, or report drafting continue.
-- When the selected data group contains both spreadsheets and companion PDF or scan sources, do not treat spreadsheet transfer alone as complete.
-- When discovery exposes companion scan sources such as data.pdf, record-book scans, or source images inside the selected data group, data transfer is incomplete until those sources are transferred or explicitly marked unresolved.
+### Procedure
+- Read text/spreadsheet sources directly when possible; for PDFs, use `prepare_data_transfer_bundle.py` to create page images, local PDF-to-text, and bundle manifest support.
+- Use vision/MinerU/PDF-text cross-checking for page-based sources and keep disagreement notes visible.
+- Preserve Chinese handwritten notes and nearby English translations; keep weakly supported phenomenon descriptions provisional.
+- Stop at the transferred Markdown and explicitly require user proofread before calculations or report prose continue.
+
+### Outputs
+- Reviewable transferred Markdown draft.
+- Bundle manifest JSON and local page/PDF-text artifacts for page-based sources when applicable.
+- Source-coverage notes, unresolved/mismatch notes, provisional phenomenon flags, and proofread request.
+
+### Validation
+- Every expected data source is covered or named in a visible source-coverage gap.
+- Page/image/PDF readings are traceable to page images, MinerU/PDF text, or direct file content as applicable.
+- The run stops before downstream analysis until the user proofreads or explicitly validates the transferred data.
+
+### Failure / Reroute Signals
+- Missing raw-data path: in standalone mode, stop and request the source; in full-workflow mode, reroute to discovery/source selection.
+- Unsupported spreadsheet/PDF dependency: report the dependency gap and any usable fallback artifact.
+- Picture evidence mismatch: mark the phenomenon description provisional and request clarification rather than finalizing it.
+- No user proofread: block calculations, uncertainty analysis, interpretation, and report drafting.
+
+### Non-Ownership
+- Does not compute derived quantities, perform uncertainty propagation, judge anomalies, write final report prose, or promote provisional observations into confirmed results.
+- Does not hide missing source pages or unsupported picture-result claims.
+
+## Optional Workflow Metadata
+- Suggested future role label: `preparer`.
+- Typical upstream tools: `course-lab-discovery`, `course-lab-run-plan`, picture-result manifesting.
+- Typical downstream tools: `course-lab-data-processing`, `course-lab-uncertainty-analysis`, `course-lab-results-interpretation`.
 
 ## Primary Commands
 
@@ -79,6 +99,24 @@ python3 /root/.codex/skills/course-lab-data-transfer/scripts/build_transfer_draf
 13. Show the finished transferred Markdown to the user and explicitly ask them to proofread it before later analysis continues.
 
 ## Quick Reference
+
+### Contract Notes
+
+- Use local `scripts/prepare_data_transfer_bundle.py` to create a standalone review bundle for each source.
+- Use local `scripts/build_transfer_draft.py` to create the first Markdown transfer draft from that bundle.
+- Save the final transferred Markdown as `<data-parent>/data_transferred/<experiment-safe-name>_data.md`.
+- For PDF sources, the review bundle should include:
+  - rendered page images for vision-first reading
+  - a located MinerU Markdown path when it exists
+  - a local PDF-to-text artifact for tie-breaking
+  - a bundle manifest JSON
+- When discovery or figure-evidence staging already found matching picture results, the review bundle should also include picture-result evidence paths and any rendered review images needed for vision inspection.
+- Keep Chinese notes in the original language first, then add the English translation immediately below or beside the original note.
+- Keep uncertainty local. If a digit, unit, symbol, or handwritten phrase is weak, mark that weakness in the transferred Markdown instead of silently choosing one interpretation.
+- If a transferred phenomenon description is not visibly supported by the matched picture-result evidence, keep it provisional or surface a question instead of treating it as final.
+- Stop after the transferred Markdown draft and explicitly ask the user to proofread it before calculations, uncertainty analysis, anomaly judgments, or report drafting continue.
+- When the selected data group contains both spreadsheets and companion PDF or scan sources, do not treat spreadsheet transfer alone as complete.
+- When discovery exposes companion scan sources such as data.pdf, record-book scans, or source images inside the selected data group, data transfer is incomplete until those sources are transferred or explicitly marked unresolved.
 
 | Situation | Action |
 |---|---|

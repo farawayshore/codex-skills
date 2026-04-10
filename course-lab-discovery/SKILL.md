@@ -11,23 +11,50 @@ Find the right local inputs before PDF decoding, workspace mutation, or report d
 
 Use the model to derive bilingual search topics at run time. The Python script should stay a one-query scorer, not a hardcoded translation table.
 
-## Output Contract
+## Standalone Tool Contract
 
-- Use local `scripts/discover_sources.py` as the canonical discovery contract.
-- Produce a ranked view of handouts, decoded JSON, references, complete data-file discovery, data groups, simulation directories, simulation files, picture-result directories, picture-result files, signatory files, result directories, language-grouped templates, excluded templates, and warnings.
-- Surface all strong same-experiment reference reports through `selected_reference_reports` instead of hiding them behind the ranked shortlist.
-- Emit `reference_selection_status` as `selected`, `ambiguous`, or `none_found` so downstream steps can distinguish a confident same-experiment bundle from discovery uncertainty.
-- Each `selected_reference_reports` entry must preserve the full dict contract:
-  - `pdf_path`
-  - `expected_decoded_markdown_path`
-  - `expected_decoded_json_path`
-- Predict canonical sibling decode paths for each selected reference report and store them under `expected_decoded_markdown_path` plus `expected_decoded_json_path`.
-- Translate the experiment topic into English and Chinese with the model, run discovery for each query independently, then compare the result sets.
-- Confirm the experiment target and show template options before any later skill mutates files.
-- If the top matches are weak, tied, or zero-score, keep that uncertainty visible and ask the user instead of choosing silently.
-- Template candidates now carry `template_language`, `template_kind`, `template_root`, `template_entry`, and a human-friendly `label`.
-- For mechanics-style or other multi-dataset experiments, discovery must surface all matched tabular data files such as `.csv`, `.tsv`, `.xls`, and `.xlsx`, not only the first few ranked files.
-- When data files cluster under one matched experiment subtree, expose that subtree through `data_groups` and keep companion scan sources such as `data.pdf`, record-book scans, or source images visible alongside the tables.
+### Use Independently When
+- You need a course-aware inventory of candidate handouts, reference reports, raw-data bundles, picture-result folders, result directories, simulations, or LaTeX templates before any report workspace exists.
+- The experiment name, course, language, or source location is ambiguous and must be resolved into ranked candidates plus unresolved gaps.
+
+### Minimum Inputs
+- A course or lab context when known, such as the course folder, syllabus label, or handout collection root.
+- An experiment query or candidate experiment name, including language variants when relevant.
+- Search roots for local handouts, data bundles, reference reports, result folders, simulations, and templates; if a root is unavailable, declare it as an unresolved search gap.
+
+### Optional Workflow Inputs
+- Desired report/template language (`english` or `chinese`) and any known experiment date or instructor metadata for tie-breaking only.
+- Existing discovery cache manifests from the same experiment-specific query.
+- A downstream workspace target that can receive an experiment-specific discovery manifest later.
+
+### Procedure
+- Use the local `scripts/discover_sources.py` command described below once per meaningful query variant.
+- Save manifests with experiment-specific filenames such as `/tmp/course-lab-discovery-<experiment-safe-name>-<variant>.json`; never reuse one generic manifest across experiments.
+- Preserve ranked alternatives and unresolved source categories instead of forcing a single match when the evidence is weak.
+
+### Outputs
+- A ranked source inventory covering the relevant handout, reference report, raw data, picture-result, result-directory, simulation, and template categories.
+- Optional experiment-specific discovery JSON manifest with candidate paths and unresolved categories.
+- A concise handoff note naming the selected source candidates and any roots that were unavailable or ambiguous.
+
+### Validation
+- The result states which roots were searched and which source categories were found, missing, or ambiguous.
+- Any saved manifest uses an experiment-specific name and can be read by later workspace/template tooling.
+- Ambiguous matches remain visible as alternatives instead of being silently collapsed.
+
+### Failure / Reroute Signals
+- Missing search root: in standalone mode, report the missing root and continue with available roots only if the remaining evidence is useful; in full-workflow mode, reroute to source-location clarification.
+- Multiple plausible experiments: return ranked candidates and request a selection before downstream mutation.
+- No credible handout or template candidate: stop before workspace creation and surface a discovery gap.
+
+### Non-Ownership
+- Does not decode PDFs, transcribe data, create report workspaces, mutate TeX, or choose final scientific scope.
+- Does not promote discovery guesses into confirmed inputs without user or downstream confirmation.
+
+## Optional Workflow Metadata
+- Suggested future role label: `preparer`.
+- Typical upstream tools: user/course query, filesystem search context.
+- Typical downstream tools: `course-lab-handout-normalization`, `course-lab-workspace-template`, `course-lab-data-transfer`.
 
 ## Primary Command
 
@@ -57,6 +84,24 @@ If the report language is already known, pass `--template-language english` or `
 11. If a human or parent workflow manually promotes selected references, preserve the full dict entry; manual promotion must not collapse `selected_reference_reports` to plain strings.
 
 ## Quick Reference
+
+### Contract Notes
+
+- Use local `scripts/discover_sources.py` as the canonical discovery contract.
+- Produce a ranked view of handouts, decoded JSON, references, complete data-file discovery, data groups, simulation directories, simulation files, picture-result directories, picture-result files, signatory files, result directories, language-grouped templates, excluded templates, and warnings.
+- Surface all strong same-experiment reference reports through `selected_reference_reports` instead of hiding them behind the ranked shortlist.
+- Emit `reference_selection_status` as `selected`, `ambiguous`, or `none_found` so downstream steps can distinguish a confident same-experiment bundle from discovery uncertainty.
+- Each `selected_reference_reports` entry must preserve the full dict contract:
+  - `pdf_path`
+  - `expected_decoded_markdown_path`
+  - `expected_decoded_json_path`
+- Predict canonical sibling decode paths for each selected reference report and store them under `expected_decoded_markdown_path` plus `expected_decoded_json_path`.
+- Translate the experiment topic into English and Chinese with the model, run discovery for each query independently, then compare the result sets.
+- Confirm the experiment target and show template options before any later skill mutates files.
+- If the top matches are weak, tied, or zero-score, keep that uncertainty visible and ask the user instead of choosing silently.
+- Template candidates now carry `template_language`, `template_kind`, `template_root`, `template_entry`, and a human-friendly `label`.
+- For mechanics-style or other multi-dataset experiments, discovery must surface all matched tabular data files such as `.csv`, `.tsv`, `.xls`, and `.xlsx`, not only the first few ranked files.
+- When data files cluster under one matched experiment subtree, expose that subtree through `data_groups` and keep companion scan sources such as `data.pdf`, record-book scans, or source images visible alongside the tables.
 
 | Need | Look at |
 |---|---|

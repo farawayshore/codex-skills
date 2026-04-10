@@ -11,32 +11,50 @@ Resolve reusable person metadata and front-matter requirements before the report
 
 This skill keeps cross-course profile fields reusable, treats chosen template language as upstream context from discovery or workspace setup, and writes only the title block and early front matter directly into the canonical report without drifting into body scaffolding or discussion writing.
 
-## When to Use
+## Standalone Tool Contract
 
-- `course-lab-discovery` has already confirmed the course and experiment.
-- `course-lab-workspace-template` or equivalent upstream context already established the chosen template and its likely language.
-- The run needs the report language to be confirmed against the chosen template language before filling names or front matter.
-- Student, collaborator, affiliation, instructor, or other course-local metadata is missing or may have changed.
-- The title block or early front matter is about to be edited.
-- The run needs to reuse or refresh `AI_works/resources/report_author_profile.json` without storing course identity there.
+### Use Independently When
+- A canonical TeX report file exists and needs title-block/front-matter metadata filled or normalized.
+- Course, instructor, author, date, collaborator, or language-specific front-matter fields need explicit handling before body drafting.
 
-Do not use this skill to choose the experiment, create the workspace, extract procedures, or draft body sections.
+### Minimum Inputs
+- Canonical TeX path to mutate.
+- Confirmed report language and template language context.
+- Metadata values or a reusable author/profile source for required fields such as title, student, instructor, course, experiment date, and collaborators.
 
-## Output Contract
+### Optional Workflow Inputs
+- Workspace manifest from `course-lab-workspace-template`.
+- Existing profile notes, course-local front-matter requirements, or user-provided title wording.
+- Normalized handout title for title consistency checks.
 
-- Use local `scripts/manage_author_profile.py` as the canonical profile-management tool.
-- Reuse `AI_works/resources/report_author_profile.json` by default unless the user explicitly overrides the profile path.
-- Create the profile automatically when it does not exist.
-- Treat the chosen template language as upstream context from discovery or workspace setup, not as something this skill guesses in isolation.
-- If the report language is still unknown, default the question from the chosen template language but still require explicit confirmation before drafting.
-- If the user intentionally wants the report language to differ from the chosen template language, surface that mismatch explicitly instead of silently proceeding.
-- Keep the reusable author profile bilingual regardless of the current template or report language.
-- Ask only for missing or changed reusable person fields plus course-local front-matter answers.
-- Keep the course name and instructor identity out of the reusable profile unless the user explicitly asks otherwise.
-- Read `references/metadata_rules.md` before editing the title block or front matter.
-- Apply the confirmed title-block and early-front-matter edits directly in the canonical report file once the workspace is available.
-- Keep direct report edits limited to the title block and early front matter; do not spill into later body prose.
-- Keep unresolved front-matter gaps visible instead of inventing values when the required metadata is incomplete.
+### Procedure
+- Use the local metadata/front-matter helper described below when it applies; otherwise make minimal TeX edits only to the title block and early front matter.
+- Preserve template language and existing macro conventions.
+- Surface missing required metadata as explicit questions or unresolved notes instead of inventing values.
+
+### Outputs
+- Updated canonical TeX title block or front matter.
+- Metadata handoff notes naming populated fields, unresolved required fields, and any profile values reused.
+- Optional machine-readable manifest when the local command supports it.
+
+### Validation
+- The canonical TeX file still exists and contains the required metadata fields or explicit unresolved placeholders.
+- Report language and template language are not mixed accidentally.
+- No body sections or scientific claims were changed as part of front-matter work.
+
+### Failure / Reroute Signals
+- Missing canonical TeX: in standalone mode, stop and request the file; in full-workflow mode, reroute to `course-lab-workspace-template`.
+- Missing required metadata: request the specific value or leave a declared unresolved placeholder; do not fabricate author, instructor, date, or collaborator information.
+- Template-specific macro ambiguity: report the macro conflict before broader TeX mutation.
+
+### Non-Ownership
+- Does not select templates, create workspaces, scaffold body sections, compute results, or write discussion prose.
+- Does not infer personal/student metadata beyond the provided profile or explicit user facts.
+
+## Optional Workflow Metadata
+- Suggested future role label: `preparer`.
+- Typical upstream tools: `course-lab-workspace-template`, user/profile metadata.
+- Typical downstream tools: `course-lab-body-scaffold`, `course-lab-experiment-principle`, `course-lab-final-staging`.
 
 ## Primary Command
 
@@ -60,6 +78,22 @@ Use `--profile /custom/path/report_author_profile.json` to override the default 
 10. Stop after the direct title-block and early-front-matter edits are complete, or after unresolved gaps are left visible for follow-up.
 
 ## Quick Reference
+
+### Contract Notes
+
+- Use local `scripts/manage_author_profile.py` as the canonical profile-management tool.
+- Reuse `AI_works/resources/report_author_profile.json` by default unless the user explicitly overrides the profile path.
+- Create the profile automatically when it does not exist.
+- Treat the chosen template language as upstream context from discovery or workspace setup, not as something this skill guesses in isolation.
+- If the report language is still unknown, default the question from the chosen template language but still require explicit confirmation before drafting.
+- If the user intentionally wants the report language to differ from the chosen template language, surface that mismatch explicitly instead of silently proceeding.
+- Keep the reusable author profile bilingual regardless of the current template or report language.
+- Ask only for missing or changed reusable person fields plus course-local front-matter answers.
+- Keep the course name and instructor identity out of the reusable profile unless the user explicitly asks otherwise.
+- Read `references/metadata_rules.md` before editing the title block or front matter.
+- Apply the confirmed title-block and early-front-matter edits directly in the canonical report file once the workspace is available.
+- Keep direct report edits limited to the title block and early front matter; do not spill into later body prose.
+- Keep unresolved front-matter gaps visible instead of inventing values when the required metadata is incomplete.
 
 | Situation | Action |
 |---|---|

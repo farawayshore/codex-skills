@@ -11,28 +11,52 @@ Build a planning-only run-plan contract from normalized handout artifacts withou
 
 This standalone package uses only local copied tools under `/root/.codex/skills/course-lab-run-plan/`. It should reread normalized handout JSON and Markdown, route obvious handout cues into downstream leaf-skill buckets, and emit aligned JSON and Markdown artifacts that keep required work, `comparison_obligations`, enrichment opportunities, and unresolved gaps visible.
 
-## When to Use
-
-- `course-lab-handout-normalization` has already produced normalized section JSON and Markdown.
-- `course-lab-workspace-template` has already established the target workspace.
-- The run needs a deterministic planning checkpoint before body scaffold, data transfer, plotting, interpretation, or final staging work starts.
-- Later skills need a stable JSON handoff contract instead of prose-only notes.
-- The handout contains obvious procedure, theory, observation, table, figure, or discussion cues that should be routed into later leaf-skill buckets.
-
 Do not use this skill to choose the experiment, decode PDFs, mutate TeX, perform data transfer, do numerical computation, or write final report sections.
 
-## Output Contract
+## Standalone Tool Contract
 
-- Use local `/root/.codex/skills/course-lab-run-plan/scripts/build_run_plan.py` as the canonical run-plan builder.
-- Feed it workspace-local normalized section JSON plus workspace-local normalized section Markdown from `/path/to/results/<experiment>/notes/sections.json` and `/path/to/results/<experiment>/notes/sections.md`.
-- Emit two aligned workspace-local artifacts:
-  - `AI_works/results/<experiment-safe-name>/<experiment-safe-name>_run_plan.json`
-  - `AI_works/results/<experiment-safe-name>/<experiment-safe-name>_run_plan.md`
-- Keep the JSON organized by downstream leaf-skill handoff buckets.
-- Keep `comparison_obligations` in the same contract so later interpretation work can compare only handout-required or already confirmed key results.
-- Render the Markdown directly from the same contract so the JSON and Markdown do not drift apart.
-- Keep unresolved gaps visible instead of inventing missing deliverables or pretending the handout is clearer than it is.
-- Accept optional rerun promotion input through `--confirmed-agent-key-results-json` when the parent flow has already approved additional comparison targets.
+### Use Independently When
+- Normalized handout artifacts and a workspace target exist, and the next step is a planning-only downstream handoff rather than TeX mutation or analysis.
+- Required work, comparison obligations, enrichment opportunities, and unresolved gaps must be captured as aligned JSON and Markdown artifacts.
+
+### Minimum Inputs
+- Normalized handout JSON and Markdown artifacts.
+- Workspace or notes output directory for run-plan artifacts.
+- Experiment/workspace identity so artifact names can be tied to the current report.
+
+### Optional Workflow Inputs
+- Workspace manifest and canonical TeX path for context only.
+- Discovery manifest, scaffold/procedure notes, or user constraints that should be reflected as handoff buckets.
+- Previously approved comparison obligations; pending or rejected proposals must remain separate.
+
+### Procedure
+- Use the local run-plan generator under this package to reread normalized handout artifacts and emit planning artifacts only.
+- Route obvious handout cues into downstream leaf-tool buckets without invoking those tools.
+- Keep unresolved gaps and optional enrichment opportunities visible instead of silently narrowing scope.
+
+### Outputs
+- Workspace-local run-plan JSON and Markdown artifacts.
+- Downstream handoff buckets for scaffold, data transfer, processing, uncertainty, plotting, interpretation, discussion, figure evidence, and final QC as applicable.
+- Visible unresolved gaps and comparison obligations with pending/rejected proposals kept out of confirmed obligations.
+
+### Validation
+- JSON and Markdown run-plan artifacts are aligned and name the same required work and unresolved gaps.
+- The run plan is planning-only: it does not mutate TeX, data, plots, or interpretation artifacts.
+- Pending or rejected agent proposals are not promoted into `comparison_obligations`.
+
+### Failure / Reroute Signals
+- Missing normalized handout artifacts: in standalone mode, stop and request them; in full-workflow mode, reroute to `course-lab-handout-normalization`.
+- Missing workspace target: emit a path-specific blocker and reroute to workspace setup.
+- Handout cues too ambiguous for a bucket: record an unresolved planning gap rather than assigning false ownership.
+
+### Non-Ownership
+- Does not choose which later tool to invoke, perform data transfer/calculation, mutate TeX, or write final report prose.
+- Does not confirm scientific scope beyond what the handout and explicit user inputs support.
+
+## Optional Workflow Metadata
+- Suggested future role label: `preparer`.
+- Typical upstream tools: `course-lab-handout-normalization`, `course-lab-workspace-template`.
+- Typical downstream tools: all leaf tools that consume run-plan handoff buckets.
 
 ## Primary Command
 
@@ -59,6 +83,19 @@ python3 /root/.codex/skills/course-lab-run-plan/scripts/build_run_plan.py \
 6. Hand the run-plan artifacts forward to later skills without treating this skill as the parent orchestrator.
 
 ## Quick Reference
+
+### Contract Notes
+
+- Use local `/root/.codex/skills/course-lab-run-plan/scripts/build_run_plan.py` as the canonical run-plan builder.
+- Feed it workspace-local normalized section JSON plus workspace-local normalized section Markdown from `/path/to/results/<experiment>/notes/sections.json` and `/path/to/results/<experiment>/notes/sections.md`.
+- Emit two aligned workspace-local artifacts:
+  - `AI_works/results/<experiment-safe-name>/<experiment-safe-name>_run_plan.json`
+  - `AI_works/results/<experiment-safe-name>/<experiment-safe-name>_run_plan.md`
+- Keep the JSON organized by downstream leaf-skill handoff buckets.
+- Keep `comparison_obligations` in the same contract so later interpretation work can compare only handout-required or already confirmed key results.
+- Render the Markdown directly from the same contract so the JSON and Markdown do not drift apart.
+- Keep unresolved gaps visible instead of inventing missing deliverables or pretending the handout is clearer than it is.
+- Accept optional rerun promotion input through `--confirmed-agent-key-results-json` when the parent flow has already approved additional comparison targets.
 
 | Situation | Action |
 |---|---|

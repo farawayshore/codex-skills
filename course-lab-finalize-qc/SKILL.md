@@ -11,19 +11,76 @@ Use this skill as the standalone final compile, QC, and handoff package for a la
 
 This package is independent and uses only local copied tools under `/root/.codex/skills/course-lab-finalize-qc/` for direct QC work. It refreshes the workspace build script, compiles the report, runs the local QC checker, inspects TeX build output for layout diagnostics such as `Overfull \hbox` or `Float too large`, measures the final PDF against the `20 MB` size cap, records the compiled PDF page count, and warns when the result falls outside the preferred `20-30` page band before handoff.
 
-When discovery already produced a same-experiment reference bundle, this skill may also run a detector-only reference-procedure comparison through `--discovery-json`. That comparison must read only the discovery-produced `selected_reference_reports` contract, must not rediscover or decode references here, and must emit parent-facing reroute instructions instead of repairing report content.
+When discovery already produced a same-experiment reference bundle, this skill may also run a detector-only reference-procedure comparison through `--discovery-json`. That comparison must read only the discovery-produced `selected_reference_reports` contract, must not rediscover or decode references here, and must emit caller-facing reroute instructions instead of repairing report content.
 
-## When to Use
+## Standalone Tool Contract
 
-- The experiment is already confirmed.
-- The canonical report workspace and `main.tex` already exist.
-- `course-lab-final-staging` already assembled the late non-figure draft.
-- `course-lab-figure-evidence` already placed the late figures.
-- The run now needs compile, QC, and handoff reporting only.
+### Use Independently When
 
-Do not use this skill to decode handouts, write or rewrite report prose, execute modeling, stage figures, or take over direct report writing.
+- A figure-placed draft or canonical `main.tex` is ready for compile/QC/handoff.
+- The caller needs build refresh, compile output inspection, PDF-size gating, page-count reporting, and issue-ticket style QC findings.
+- Optional evidence-plan, discussion-candidate, discovery, examiner-rubric, or same-experiment reference inputs are available for additional checks.
+- The tool should report patch plans and rerun hints, not silently repair report prose.
+- `course-lab-final-staging` already assembled the late non-figure draft, `course-lab-figure-evidence` already placed the late figures, and the run now needs compile, QC, and handoff reporting only.
 
-## Output Contract
+### Minimum Inputs
+
+- `--main-tex` pointing to the canonical TeX entrypoint in a report workspace.
+- `--procedures` pointing to the handout/procedure coverage artifact used by local QC.
+- Output paths for `final_qc_summary.json`, `final_qc_summary.md`, and `final_qc_unresolved.md`.
+- A build path that can run `bash build.sh`; the local `assets/build.sh` is used when the workspace copy is missing or stale.
+
+### Optional Workflow Inputs
+
+- `--evidence-plan` from figure evidence to check planned figure/evidence markers.
+- `--discussion-candidates` or newer discussion-ideas handoff artifacts for Further Discussion QA.
+- `--discovery-json` containing `selected_reference_reports` and `reference_selection_status` for detector-only same-experiment comparison.
+- An external examiner rubric or senior advice note supplied by the caller; if absent, use local `references/quality_gate.md` and label advice as generic.
+
+### Procedure
+
+- Use only local scripts in `/root/.codex/skills/course-lab-finalize-qc/scripts/`.
+- Refresh `build.sh`, compile, inspect layout diagnostics, run `report_qc.py`, check the hard `20 MB` PDF gate, and record page count.
+- Translate QC findings into a score/rubric summary and concrete issue tickets in the human-facing handoff summary.
+- Include rerun hints that name the likely upstream tool (`course-lab-final-staging`, `course-lab-figure-evidence`, `$compress-png`, or source discovery) without rewriting content here.
+- Preserve declared-unresolved and data-lack findings from reference comparison as visible final handoff risks.
+
+### Outputs
+
+- `final_qc_summary.json` with compile/QC/PDF/reference-comparison status.
+- `final_qc_summary.md` with examiner-style score/rubric summary, issue tickets, evidence, and rerun hints.
+- `final_qc_unresolved.md` with hard failures, warnings, declared-unresolved items, suspected data-lack items, and oversized-PDF handoff instructions.
+- A refreshed workspace `build.sh` when needed, plus the compiled PDF when the build succeeds.
+
+### Validation
+
+- Compile status, PDF existence, layout diagnostics, local QC result, PDF byte size, and page count are recorded.
+- Any `20 MB` failure points to `$compress-png`; this skill does not compress or convert images itself.
+- Same-experiment reference comparison runs only after compile, local QC, layout, and PDF-size gates pass.
+- Declared unresolved/data-lack lanes remain visible in the final summary and unresolved artifacts.
+- Local final-QC tests pass.
+
+### Failure / Reroute Signals
+
+- Missing `main.tex`, procedures, build support, or compiled PDF: stop in standalone mode with exact missing paths; in full-report mode, reroute to workspace/template, body-scaffold, final-staging, or build setup as appropriate.
+- Compile, layout, local QC, PDF-size, or page-band findings: emit issue tickets and rerun hints without editing report prose.
+- Missing evidence plan or discussion handoff: continue only for checks that remain meaningful, then list the missing optional checks as unresolved risks.
+- Reference comparison missing structure, missing content, declared unresolved, or suspected data-lack: keep those findings visible and route repairs upstream rather than masking them.
+
+### Non-Ownership
+
+- This tool does not decode handouts, transfer data, compute results, execute modeling, write prose, stage figures, compress images, convert image formats, discover references, decode references, or patch final report content.
+- This tool may recommend repairs but does not apply them unless a future explicit repair mode is added.
+- This tool does not require a full-workflow controller, examiner agent, senior agent, or native course-lab agent file for standalone use.
+- Do not use this skill to decode handouts, write or rewrite report prose, execute modeling, stage figures, or take over direct report writing.
+
+## Optional Workflow Metadata
+
+- Suggested future role label: `examiner`.
+- Typical upstream tools: `course-lab-final-staging`, `course-lab-figure-evidence`, optional source discovery.
+- Typical downstream tools: `$compress-png` for oversized image assets, or a targeted upstream rerun based on issue tickets.
+
+## Workflow Notes
 
 - Use local `/root/.codex/skills/course-lab-finalize-qc/scripts/finalize_qc.py` as the main entrypoint.
 - Use local `/root/.codex/skills/course-lab-finalize-qc/scripts/report_qc.py` as the copied QC checker.
@@ -86,10 +143,10 @@ python3 /root/.codex/skills/course-lab-finalize-qc/scripts/finalize_qc.py \
 
 ## Common Mistakes
 
-- Reaching back into parent or sibling skill folders instead of using the copied local tools.
+- Reaching back into external or sibling skill folders instead of using the copied local tools.
 - Treating page-count guidance as a hard failure instead of a visible QC warning.
 - Trusting source-only heuristics while ignoring TeX overflow diagnostics that already prove the rendered PDF is broken.
-- Letting this detector leaf re-own report writing, reference discovery, or reference decoding instead of emitting reroutes for the parent orchestrator.
+- Letting this detector leaf re-own report writing, reference discovery, or reference decoding instead of emitting reroutes for the full-report orchestrator.
 - Letting this skill reclaim late writing work that belongs upstream.
 - Compressing or converting images inside this skill instead of handing oversized PDFs off to `$compress-png`.
 

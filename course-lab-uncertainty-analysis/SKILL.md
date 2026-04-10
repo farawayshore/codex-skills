@@ -9,17 +9,51 @@ description: Use when a course lab-report run already has user-validated transfe
 
 Turn validated measurement data into uncertainty artifacts, but read the handout first so the quantity symbols, units, and required indirect results are resolved before any calculation starts.
 
-This skill is standalone with local copied tools. It should not reach back into the old `course-lab-report` folder for uncertainty computation.
+This skill is standalone at the contract level, but in the current family layout it reuses the existing family-local calculators under `/root/.codex/skills/course-lab-data-processing/scripts/` because this package does not yet carry its own copied script toolchain. It should not reach back into the old `course-lab-report` folder for uncertainty computation.
 
-## When to Use
+## Standalone Tool Contract
 
-- The experiment is already confirmed.
-- The transferred data has already been shown to the user and explicitly validated.
-- The matching handout is available and can be read before the calculation pass.
-- The run needs direct uncertainty summaries, indirect quantities, or propagated uncertainty artifacts before interpretation starts.
-- Measurement resolution or instrument information is known, or the run needs a visible provisional state for missing resolution data.
+### Use Independently When
+- Validated data and handout uncertainty requirements are available and the run needs direct uncertainty summaries, propagated indirect uncertainties, or expanded-uncertainty artifacts.
+- Uncertainty artifacts must be prepared before interpretation, theory comparison, plotting, or report prose.
 
-Do not use this skill to choose the experiment, transcribe raw data, stage figures, write interpretation prose, compare with theory, or draft the final discussion.
+### Minimum Inputs
+- User-validated transferred data or processed direct-measurement artifacts.
+- Matching handout/normalized section artifacts that define symbols, units, formulas, and uncertainty expectations.
+- Direct uncertainty assumptions/rules or enough instrument information to state unresolved uncertainty gaps honestly.
+
+### Optional Workflow Inputs
+- Processed-data manifests, derived-quantity specs, run-plan obligations, or appendix-calculation destinations.
+- Approved user corrections to measurement or instrument uncertainties.
+
+### Procedure
+- Read the handout first so uncertainty notation and required indirect results match the experiment.
+- Use the existing family-local calculators under `/root/.codex/skills/course-lab-data-processing/scripts/` for supported direct-summary and propagation calculations.
+- Keep unsupported or underspecified uncertainty terms as visible unresolved items rather than filling them with guesses.
+
+### Outputs
+- Direct uncertainty summaries and propagated uncertainty artifacts.
+- Derived-quantity uncertainty results where supported by validated data and formulas.
+- Unresolved uncertainty notes naming missing measurements, instrument rules, or formula support.
+
+### Validation
+- Symbols, units, and formulas align with the handout and validated data.
+- Every propagated value is traceable to a direct input and documented propagation rule.
+- Handout-requested uncertainty results that cannot be computed are explicitly unresolved.
+
+### Failure / Reroute Signals
+- Missing data validation: in standalone mode, stop for validated transfer artifacts; in full-workflow mode, reroute to data transfer/proofread.
+- Missing handout or uncertainty rule: stop or emit unresolved uncertainty notes rather than guessing.
+- Formula/input mismatch: report the mismatch and withhold propagated values until resolved.
+
+### Non-Ownership
+- Does not perform broad data interpretation, write discussion prose, mutate final TeX, or place figures.
+- Does not invent instrument uncertainties or silently compute unsupported indirect quantities.
+
+## Optional Workflow Metadata
+- Suggested future role label: `data-analyst`.
+- Typical upstream tools: `course-lab-data-transfer`, `course-lab-data-processing`, `course-lab-handout-normalization`.
+- Typical downstream tools: `course-lab-results-interpretation`, `course-lab-final-staging`, `course-lab-symbolic-expressing`.
 
 ## Core Rule
 
@@ -29,22 +63,12 @@ Do not use this skill to choose the experiment, transcribe raw data, stage figur
 - Example: `T/N` may means quantity `T` with unit `N`, not one merged quantity named `T/N`, read the handout to ensure which one is correct.
 - If the transferred notation still conflicts with the handout after that read, stop and ask instead of normalizing it silently.
 
-## Output Contract
-
-- Use local `scripts/compute_uncertainties.py` for direct measured quantities and repeated-measurement summaries.
-- Use local `scripts/propagate_uncertainties.py` for indirect quantities and propagation-rule calculations.
-- Keep all uncertainty computation paths local to `/root/.codex/skills/course-lab-uncertainty-analysis/`.
-- Default the expanded-uncertainty coverage factor to `k=2` unless the handout or experiment rules explicitly require a different value.
-- Cover every corresponding indirect measured quantity requested in the handout when the validated data are sufficient.
-- If a handout-requested indirect quantity cannot yet be computed from validated data, emit a visible unresolved artifact instead of omitting it quietly.
-- Keep missing resolution information visible. If a resolution is not yet known, do not invent it.
-
 ## Primary Commands
 
 Direct measured quantities after the handout notation is resolved:
 
 ```bash
-python3 /root/.codex/skills/course-lab-uncertainty-analysis/scripts/compute_uncertainties.py \
+python3 /root/.codex/skills/course-lab-data-processing/scripts/compute_uncertainties.py \
   --input "/path/to/results/<experiment>/analysis/direct_measurements.csv" \
   --quantity "T/N" \
   --resolution "T/N=0.001" \
@@ -55,7 +79,7 @@ python3 /root/.codex/skills/course-lab-uncertainty-analysis/scripts/compute_unce
 Indirect quantities with propagation rules:
 
 ```bash
-python3 /root/.codex/skills/course-lab-uncertainty-analysis/scripts/propagate_uncertainties.py \
+python3 /root/.codex/skills/course-lab-data-processing/scripts/propagate_uncertainties.py \
   --spec "/path/to/results/<experiment>/analysis/derived_quantity_spec.json" \
   --output-markdown "/path/to/results/<experiment>/analysis/derived_uncertainty.md" \
   --output-json "/path/to/results/<experiment>/analysis/derived_uncertainty.json"
@@ -83,12 +107,22 @@ Example propagation spec shape:
 1. Read the matching handout before touching the data table.
 2. List the handout’s direct measured quantities, notation, units, and every indirect quantity it asks to compute.
 3. Build a run-local quantity contract so raw labels from the transfer are mapped to handout meanings before summary work starts.
-4. Run `scripts/compute_uncertainties.py` for the direct measured quantities and repeated series.
+4. Run `/root/.codex/skills/course-lab-data-processing/scripts/compute_uncertainties.py` for the direct measured quantities and repeated series.
 5. Build a derived-quantity spec for every handout-requested indirect result that is supported by the validated data.
-6. Run `scripts/propagate_uncertainties.py` on that spec.
+6. Run `/root/.codex/skills/course-lab-data-processing/scripts/propagate_uncertainties.py` on that spec.
 7. Review the direct and derived outputs together, checking for provisional resolution fields, notation mismatches, and handout-requested quantities that are still unresolved.
 
 ## Quick Reference
+
+### Contract Notes
+
+- Use `/root/.codex/skills/course-lab-data-processing/scripts/compute_uncertainties.py` for direct measured quantities and repeated-measurement summaries.
+- Use `/root/.codex/skills/course-lab-data-processing/scripts/propagate_uncertainties.py` for indirect quantities and propagation-rule calculations.
+- Keep all executable uncertainty computation paths inside the installed course-lab family; do not reach back into the old parent workflow.
+- Default the expanded-uncertainty coverage factor to `k=2` unless the handout or experiment rules explicitly require a different value.
+- Cover every corresponding indirect measured quantity requested in the handout when the validated data are sufficient.
+- If a handout-requested indirect quantity cannot yet be computed from validated data, emit a visible unresolved artifact instead of omitting it quietly.
+- Keep missing resolution information visible. If a resolution is not yet known, do not invent it.
 
 | Situation | Action |
 |---|---|
@@ -107,7 +141,7 @@ Example propagation spec shape:
 - Handout notation wins over ambiguous transferred shorthand.
 - Do not collapse quantity and unit into one name just because the table header uses a slash.
 - Do not let uncertainty work expand into theory comparison, reliability judgment, or final discussion drafting.
-- Keep parent-skill path dependencies out of the workflow. Use the copied local scripts in this folder instead of the old `course-lab-report` folder.
+- Keep parent-skill path dependencies out of the workflow. Use the installed course-lab family calculators under `course-lab-data-processing/scripts/` instead of the old `course-lab-report` folder.
 
 ## Common Mistakes
 
@@ -120,9 +154,6 @@ Example propagation spec shape:
 
 ## Resources
 
-- `scripts/compute_uncertainties.py`: local direct-quantity uncertainty calculator
-- `scripts/propagate_uncertainties.py`: local derived-quantity and propagation-rule calculator
-- `scripts/common.py`: local copied helper module for standalone packaging
-- `tests/test_compute_uncertainties.py`: local regression tests for direct summaries and handout-style labels
-- `tests/test_propagate_uncertainties.py`: local regression tests for derived quantities and propagation
-- `tests/test_skill_package.py`: local standalone packaging tests
+- `/root/.codex/skills/course-lab-data-processing/scripts/compute_uncertainties.py`: family-local direct-quantity uncertainty calculator reused by this skill
+- `/root/.codex/skills/course-lab-data-processing/scripts/propagate_uncertainties.py`: family-local derived-quantity and propagation-rule calculator reused by this skill
+- `/root/.codex/skills/course-lab-data-processing/scripts/common.py`: family-local helper module behind the shared calculator surface

@@ -11,21 +11,73 @@ Use this skill as the standalone late-stage non-figure writer for a lab report.
 
 This package is independent and uses only local copied tools under `/root/.codex/skills/course-lab-final-staging/`. It should read the canonical `main.tex` plus stabilized upstream artifacts, then assemble a substantive draft that favors completeness over brevity: direct results for each case, handout-demanded indirect results, data-processing narration, uncertainty-calculation narration, modeling inclusion, synthesized discussion, calculation details appendix support, and appendix code support. The goal is a text-first draft that naturally supports a roughly `20-30` page two-column final PDF after `course-lab-figure-evidence` and final QC complete the later stages.
 
-## When to Use
+## Standalone Tool Contract
 
-- The experiment is already confirmed.
-- The canonical report workspace and `main.tex` already exist.
-- Front matter is already handled by `course-lab-metadata-frontmatter`.
-- Introduction, nearby Background, and Experiment Principle are already handled by `course-lab-experiment-principle`.
-- Stable processed-data artifacts already exist.
-- Stable results-interpretation artifacts already exist.
-- Stable discussion-synthesis artifacts already exist.
-- Confirmed references may already exist as an explicit upstream artifact and should be rendered downstream without re-searching.
-- Optional modeling artifacts or appendix code files may also exist and should be staged into the report when relevant.
+### Use Independently When
 
-Do not use this skill to transfer raw data, recompute uncertainties, execute modeling, place late figures, compile the report, or take over final QC.
+- A canonical report workspace already exists and needs late non-figure body assembly.
+- Stable upstream artifacts already describe processed data, uncertainty support, interpretation, and discussion synthesis.
+- The caller wants report-ready result/procedure/discussion prose and appendix staging without figure placement or compile/QC ownership.
+- Optional confirmed references, modeling artifacts, calculation-detail manifests, symbolic-expressing handoffs, appendix data, or appendix code are available as explicit inputs.
+- Front matter is already settled, theory-facing sections are already handled by `course-lab-experiment-principle`, and this late non-figure lane hands off to `course-lab-figure-evidence` and final QC after staging.
 
-## Output Contract
+### Minimum Inputs
+
+- A canonical TeX entrypoint supplied through `--main-tex`.
+- `--body-scaffold-json` identifying safe target sections, scaffold placeholders, and any summary-only rerun mode.
+- `--procedures-markdown`, `--processed-data-json`, `--results-interpretation-json`, and `--discussion-synthesis-json` from stable upstream work.
+- Output paths for `final_staging_summary.json`, `final_staging_summary.md`, `final_staging_unresolved.md`, and `appendix_code_manifest.json`.
+- Safe TeX mutation authority: owned placeholder sections, explicitly draft-like blocks, or `% course-lab-final-staging:allow-overwrite`; otherwise preserve substantive prose and report the gap.
+
+### Optional Workflow Inputs
+
+- `--references-json` containing confirmed staged literature context.
+- `--modeling-result`, `--appendix-data`, `--appendix-code`, and `--calculation-details-manifest` when those artifacts should be rendered.
+- Full symbolic helper handoff paths: `--symbolic-handout`, `--symbolic-calculation-code`, `--symbolic-processed-result`, `--symbolic-result-key`, and `--symbolic-output-dir`.
+- Upstream comparison-case records for compact case-by-case comparison rendering and downstream paired-image placement.
+
+### Procedure
+
+- Use `/root/.codex/skills/course-lab-final-staging/scripts/build_final_staging.py` and the local helper modules only.
+- Validate every caller-provided artifact before mutating TeX; do not discover calculation details, appendix files, symbolic inputs, or literature sources by workspace scanning.
+- Write only non-figure, late-stage body/appendix content into safe owned target sections.
+- Preserve case-by-case direct and indirect results, uncertainty routes, and unresolved support limits.
+- Treat symbolic expressing as an optional explicit handoff and inline its returned temporary TeX only when the path is safe and the selected result still needs mathematical procedure detail.
+
+### Outputs
+
+- Mutated `main.tex` with late non-figure report assembly only where safe.
+- `final_staging_summary.json` and `final_staging_summary.md` recording staged content, confirmed references, and normalized comparison cases.
+- `final_staging_unresolved.md` recording missing artifacts, unsafe overwrite decisions, incomplete symbolic handoffs, or weak comparison support.
+- `appendix_code_manifest.json` plus staged calculation-detail, data-record, and code appendix material when explicitly provided.
+
+### Validation
+
+- Summary artifacts exist and list the major rendered lanes: direct results, indirect results, processing narration, uncertainty narration, discussion synthesis, and any explicit appendix/reference/modeling inputs.
+- Unresolved output exists even when empty or informational, and preserves data-lack or support-limit notes instead of hiding them in confident prose.
+- The TeX diff avoids front matter, theory-facing sections, late figure placement, compiler settings, and final-QC material.
+- Local final-staging tests pass after documentation or helper changes.
+
+### Failure / Reroute Signals
+
+- Missing required upstream artifacts: stop in standalone mode with the exact missing paths; in full-report mode, return reroute hints to the producing data, interpretation, discussion, or scaffold tool.
+- Unsafe TeX targets or substantive user prose without an overwrite marker: preserve the block and record an unresolved staging issue.
+- Incomplete symbolic handoff: continue without symbolic inlining when possible and record the missing fields in `final_staging_unresolved.md`.
+- Malformed confirmed references, modeling results, appendix manifests, or comparison cases: skip that optional lane, preserve the rest of the staging run when safe, and emit a precise rerun hint.
+
+### Non-Ownership
+
+- This tool does not transfer raw data, recompute results, recompute uncertainties, execute modeling, search for literature, place late figures, compile the report, or perform final QC.
+- This tool does not infer or silently promote missing scientific scope from unrelated files.
+- This tool does not own final report completeness after figures and QC; it hands off explicit artifacts for those later tools.
+
+## Optional Workflow Metadata
+
+- Suggested future role label: `writer`.
+- Typical upstream tools: `course-lab-data-processing`, `course-lab-uncertainty-analysis`, `course-lab-results-interpretation`, `course-lab-discussion-synthesis`.
+- Typical downstream tools: `course-lab-figure-evidence`, `course-lab-finalize-qc`.
+
+## Workflow Notes
 
 - Use local `/root/.codex/skills/course-lab-final-staging/scripts/build_final_staging.py` as the main entrypoint.
 - Keep runtime dependencies local to `/root/.codex/skills/course-lab-final-staging/`.

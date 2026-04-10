@@ -13,25 +13,49 @@ This skill is standalone with local copied tools. It should use the local script
 
 The renderer uses a vendored local `matplotlib` copy under this skill folder so the package stays self-contained while producing stronger scientific plots than a hand-drawn fallback.
 
-## When to Use
+## Standalone Tool Contract
 
-- The experiment is already confirmed.
-- The run already has validated transferred data or processed numeric artifacts.
-- The handout or run plan already identifies one or more required plots.
-- The workflow needs permanent plot assets under the matched `plottings/` folder before later figure staging or interpretation.
-- The plots should mark honest special point features such as a highest point, lowest point, or zero point when those can be derived directly from the numeric artifacts.
+### Use Independently When
+- Validated or processed numeric artifacts already exist and a handout-grounded plotting requirement needs permanent plot assets.
+- Honest special-point annotations such as maxima, minima, or zero crossings can be derived directly from the numeric artifact.
 
-Do not use this skill to transcribe raw data, compute new derived quantities, run modeling jobs, stage figures into report order, or write interpretation prose.
+### Minimum Inputs
+- Numeric artifact or explicit plot job specification with x/y columns, units, labels, and output asset destination.
+- Handout/run-plan plotting requirement or user instruction establishing why the plot is needed.
+- Workspace or asset output directory for generated images and manifests.
 
-## Output Contract
+### Optional Workflow Inputs
+- Processed-data manifests, uncertainty artifacts, result inventory, or existing plot manifest to update.
+- Style constraints from the report template or figure-staging plan.
 
-- Use local `/root/.codex/skills/course-lab-plotting/scripts/build_plot_job.py` to normalize one plotting request into `plot_job.json`.
-- Use local `/root/.codex/skills/course-lab-plotting/scripts/detect_special_points.py` to detect honest annotation candidates from numeric series.
-- Use local vendored `matplotlib` from `/root/.codex/skills/course-lab-plotting/vendor/` through `/root/.codex/skills/course-lab-plotting/scripts/render_plot.py` to render the final PNG output with controlled color styling and special point markers.
-- Use local `/root/.codex/skills/course-lab-plotting/scripts/write_plot_manifest.py` to emit `plot_manifest.json` and `plot_unresolved.md`.
-- Keep permanent outputs under `AI_works/resources/experiment_pic_results/<matched-experiment-path>/plottings/`.
-- Prefer serial identity for filenames such as `plot-01.png`. Use compact parameter identity only when a stable serial case is missing.
-- If the plotting requirement is underspecified, or required columns are missing, emit a visible unresolved note instead of inventing data or axis meaning.
+### Procedure
+- Use the local plot rendering and `write_plot_manifest.py` helpers described below.
+- Render only from already-available numeric data; do not perform hidden data processing or model fitting outside the plot spec.
+- Add special-point annotations only when the numeric artifact directly supports them.
+
+### Outputs
+- Permanent plot image files.
+- `plot_manifest.json` describing generated assets, input data, labels, and annotations.
+- `plot_unresolved.md` or equivalent notes for missing columns, unsupported annotations, or incomplete plot specs.
+
+### Validation
+- Generated plot files exist at the manifest paths and can be traced to the input numeric artifact.
+- Axis labels, units, and annotations match the plot spec and handout-grounded requirement.
+- Unsupported special-point requests remain unresolved instead of being invented.
+
+### Failure / Reroute Signals
+- Missing numeric artifact: in standalone mode, stop and request it; in full-workflow mode, reroute to data processing.
+- Missing plotting requirement/spec: request the concrete plot job or record an unresolved plot need.
+- Unsupported annotation/model request: emit an unresolved note and avoid hidden fitting or fabricated markers.
+
+### Non-Ownership
+- Does not transcribe data, compute primary results, run scientific modeling, stage figures into TeX, or write report prose.
+- Does not invent annotations or smooth/fit data beyond the explicit plot specification.
+
+## Optional Workflow Metadata
+- Suggested future role label: `data-analyst`.
+- Typical upstream tools: `course-lab-data-processing`, `course-lab-uncertainty-analysis`, `course-lab-run-plan`.
+- Typical downstream tools: `course-lab-results-interpretation`, `course-lab-figure-evidence`, `course-lab-final-staging`.
 
 ## Primary Commands
 
@@ -81,6 +105,16 @@ python3 /root/.codex/skills/course-lab-plotting/scripts/write_plot_manifest.py \
 8. If a required plot cannot be produced honestly, preserve that state in `plot_unresolved.md` rather than fabricating a result.
 
 ## Quick Reference
+
+### Contract Notes
+
+- Use local `/root/.codex/skills/course-lab-plotting/scripts/build_plot_job.py` to normalize one plotting request into `plot_job.json`.
+- Use local `/root/.codex/skills/course-lab-plotting/scripts/detect_special_points.py` to detect honest annotation candidates from numeric series.
+- Use local vendored `matplotlib` from `/root/.codex/skills/course-lab-plotting/vendor/` through `/root/.codex/skills/course-lab-plotting/scripts/render_plot.py` to render the final PNG output with controlled color styling and special point markers.
+- Use local `/root/.codex/skills/course-lab-plotting/scripts/write_plot_manifest.py` to emit `plot_manifest.json` and `plot_unresolved.md`.
+- Keep permanent outputs under `AI_works/resources/experiment_pic_results/<matched-experiment-path>/plottings/`.
+- Prefer serial identity for filenames such as `plot-01.png`. Use compact parameter identity only when a stable serial case is missing.
+- If the plotting requirement is underspecified, or required columns are missing, emit a visible unresolved note instead of inventing data or axis meaning.
 
 | Situation | Action |
 |---|---|

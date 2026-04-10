@@ -11,16 +11,52 @@ Turn validated measurement data into handout-aligned processing artifacts, inclu
 
 This skill is standalone with local copied tools. It should not reach back into the old `course-lab-report` folder for uncertainty computation.
 
-## When to Use
+## Standalone Tool Contract
 
-- The experiment is already confirmed.
-- The transferred data has already been shown to the user and explicitly validated.
-- The matching handout is available and can be read before the calculation pass.
-- The run needs direct uncertainty summaries, indirect quantities, or propagated uncertainty artifacts before interpretation starts.
-- The parent reroute may have approved newly confirmed key quantities that now need a fresh processing pass before comparison resumes.
-- Measurement resolution or instrument information is known, or the run needs a visible provisional state for missing resolution data.
+### Use Independently When
+- User-validated transferred data and matching handout requirements are available and must be converted into handout-aligned direct summaries, derived quantities, and calculation artifacts.
+- Appendix-ready calculation details are needed before interpretation or report assembly.
 
-Do not use this skill to choose the experiment, transcribe raw data, stage figures, write interpretation prose, compare with theory, or draft the final discussion.
+### Minimum Inputs
+- User-validated transferred data artifact(s); unproofread transfer drafts are not sufficient.
+- Matching handout/normalized section artifacts that define quantity symbols, units, required direct measurements, and required indirect results.
+- A calculation or derived-quantity specification for each computable handout-requested result, including uncertainty inputs when propagation is required.
+
+### Optional Workflow Inputs
+- Run-plan comparison obligations, procedure anchors, plotting requirements, or interpretation inventory expectations.
+- Existing uncertainty rules, processed-data manifests, or approved user corrections.
+- Output directory for analysis artifacts and appendix-ready TeX supplements.
+
+### Procedure
+- Read the handout first and align symbols, units, and required quantities before calculating.
+- Use local `scripts/propagate_uncertainties.py` for derived quantities and propagation-rule calculations, and local rendering helpers for calculation-detail artifacts.
+- Emit visible unresolved artifacts for handout-requested quantities that validated data cannot support.
+- Add credibility/support labels to processed outputs, distinguishing handout-backed, data-backed, computed, assumed, and unresolved items.
+
+### Outputs
+- Direct-measurement summaries and processed-data JSON/Markdown artifacts.
+- Derived-quantity specs/results and propagation artifacts where supported.
+- `calculation_details_manifest.json` plus generated TeX attachments when appendix-ready calculation detail is requested.
+- Visible unresolved artifacts for missing or unsupported handout-requested quantities.
+
+### Validation
+- Every computed quantity is traceable to validated transferred data and handout symbols/units.
+- Required indirect quantities are either computed with a documented formula/procedure or recorded as unresolved with the missing input named.
+- Credibility/support labels are present for processed results so later interpretation does not overstate weak support.
+
+### Failure / Reroute Signals
+- Unproofread or missing transferred data: in standalone mode, stop and request validation; in full-workflow mode, reroute to `course-lab-data-transfer` and the proofread gate.
+- Missing handout requirements: stop or reroute to handout normalization/run-plan before calculating.
+- Incomplete data for a required indirect result: emit unresolved artifacts instead of fabricating or omitting the result.
+
+### Non-Ownership
+- Does not write interpretation, broad discussion prose, final report sections, or figure placement.
+- Does not silently promote unsupported calculations or pending proposal results into official scope.
+
+## Optional Workflow Metadata
+- Suggested future role label: `data-analyst`.
+- Typical upstream tools: `course-lab-data-transfer`, `course-lab-handout-normalization`, `course-lab-run-plan`.
+- Typical downstream tools: `course-lab-uncertainty-analysis`, `course-lab-plotting`, `course-lab-results-interpretation`, `course-lab-symbolic-expressing`.
 
 ## Core Rule
 
@@ -32,23 +68,6 @@ Do not use this skill to choose the experiment, transcribe raw data, stage figur
 - Example: if the handout measures `2r`, then the direct measured quantity is still `2r`, not `r`.
 - If the workflow needs `r`, derive it explicitly later, for example `r = two_r / 2`.
 - If the transferred notation still conflicts with the handout after that read, stop and ask instead of normalizing it silently.
-
-## Output Contract
-
-- Use local `scripts/compute_uncertainties.py` for direct measured quantities and repeated-measurement summaries.
-- Use local `scripts/propagate_uncertainties.py` for indirect quantities and propagation-rule calculations.
-- Use local `scripts/render_calculation_details.py` when the run needs appendix-ready calculation-detail attachments for later report staging.
-- Keep all data-processing computation paths local to `/root/.codex/skills/course-lab-data-processing/`.
-- Keep a quantity contract that preserves the measured symbol and its canonical safe key together.
-- Default the expanded-uncertainty coverage factor to `k=2` unless the handout or experiment rules explicitly require a different value.
-- Cover every corresponding indirect measured quantity requested in the handout when the validated data are sufficient.
-- If a handout-requested indirect quantity cannot yet be computed from validated data, emit a visible unresolved artifact instead of omitting it quietly.
-- Keep missing resolution information visible. If a resolution is not yet known, do not invent it.
-- On reruns, recompute only the newly confirmed or newly required quantities that upstream comparison obligations added, and keep those outputs comparison-ready for later interpretation.
-- When later report assembly needs appendix-ready calculation detail, emit `calculation_details_manifest.json` plus generated `.tex` attachments that present a compact formula-first derivation supplement rather than a raw numeric dump.
-- Prefer symbolic calculation flow, partial-derivative propagation structure, and a visible appendix-style callout block over exhaustive value tables.
-- Treat those generated calculation-detail attachments as appendix material that may use full-width pages, so readable derivation notation such as `\sqrt{...}` is preferred over special compressed formatting that only exists to protect narrow two-column layouts.
-- Allow the calculation-details spec to narrow the appendix with a `focus_derived` list when only key derivations should appear so the appendix stays within a practical page budget.
 
 ## Primary Commands
 
@@ -139,6 +158,23 @@ Example compact appendix spec shape:
 12. Review the direct and derived outputs together, checking for provisional resolution fields, notation mismatches, handout-requested quantities that are still unresolved, and whether the generated appendix attachments emphasize derivation structure instead of raw numeric repetition.
 
 ## Quick Reference
+
+### Contract Notes
+
+- Use local `scripts/compute_uncertainties.py` for direct measured quantities and repeated-measurement summaries.
+- Use local `scripts/propagate_uncertainties.py` for indirect quantities and propagation-rule calculations.
+- Use local `scripts/render_calculation_details.py` when the run needs appendix-ready calculation-detail attachments for later report staging.
+- Keep all data-processing computation paths local to `/root/.codex/skills/course-lab-data-processing/`.
+- Keep a quantity contract that preserves the measured symbol and its canonical safe key together.
+- Default the expanded-uncertainty coverage factor to `k=2` unless the handout or experiment rules explicitly require a different value.
+- Cover every corresponding indirect measured quantity requested in the handout when the validated data are sufficient.
+- If a handout-requested indirect quantity cannot yet be computed from validated data, emit a visible unresolved artifact instead of omitting it quietly.
+- Keep missing resolution information visible. If a resolution is not yet known, do not invent it.
+- On reruns, recompute only the newly confirmed or newly required quantities that upstream comparison obligations added, and keep those outputs comparison-ready for later interpretation.
+- When later report assembly needs appendix-ready calculation detail, emit `calculation_details_manifest.json` plus generated `.tex` attachments that present a compact formula-first derivation supplement rather than a raw numeric dump.
+- Prefer symbolic calculation flow, partial-derivative propagation structure, and a visible appendix-style callout block over exhaustive value tables.
+- Treat those generated calculation-detail attachments as appendix material that may use full-width pages, so readable derivation notation such as `\sqrt{...}` is preferred over special compressed formatting that only exists to protect narrow two-column layouts.
+- Allow the calculation-details spec to narrow the appendix with a `focus_derived` list when only key derivations should appear so the appendix stays within a practical page budget.
 
 | Situation | Action |
 |---|---|

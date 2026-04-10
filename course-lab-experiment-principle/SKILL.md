@@ -13,18 +13,72 @@ This skill is standalone with copied local tools. It owns direct writing for `In
 
 For combined reports, use `part-scoped` runs: run the skill once per matching report part. Do not merge multiple handouts into one theory-writing pass.
 
-## When to Use
+## Standalone Tool Contract
 
-- `course-lab-handout-normalization` already produced normalized section Markdown or JSON.
-- `course-lab-workspace-template` already established the canonical report file.
-- `course-lab-body-scaffold` already ensured the owned sections exist in the report structure.
-- The run needs direct theory-facing writing before later result or discussion assembly.
-- Handout-derived principle or background images should be placed inside those owned sections.
-- A combined report has repeated part sections such as `LX1` and `LX2`, and each handout should fill only its matching part.
+### Use Independently When
 
-Do not use this skill to choose the experiment, normalize the handout, create the workspace, transfer raw data, compute results, write discussion prose, place experiment-result photos, or run final QC.
+- A caller already has normalized handout sections and wants theory-facing report text inserted into a known TeX target.
+- A report scaffold already contains `Introduction`, nearby `Background`, or `Experiment Principle` targets that can be safely mutated.
+- Handout-derived theory figures need local staging before the later experiment-picture stage.
+- A combined report needs one explicit handout-to-parent-section pass at a time.
+- Normalized sections already came from `course-lab-handout-normalization`, the canonical report exists from `course-lab-workspace-template`, and owned targets exist from `course-lab-body-scaffold`.
 
-## Output Contract
+### Minimum Inputs
+
+- A canonical report TeX path supplied through `--report-tex`.
+- Either normalized handout Markdown through `--sections-markdown` or normalized handout JSON through `--sections-json`; use Markdown first when both exist.
+- A scaffolded section map in the TeX target showing the owned theory-facing sections, plus `--parent-section` when the run is part-scoped.
+- Output paths for `--output-json` and `--output-unresolved`.
+- When theory images are required, decoded handout JSON plus output paths for `principle_figures.json`, `principle_figures.tex`, and the staged image directory.
+
+### Optional Workflow Inputs
+
+- Body-scaffold or run-plan notes that clarify section names and part labels.
+- Discovery notes about which decoded handout belongs to the current report part.
+- Existing user-written TeX that should be preserved unless it is clearly placeholder text.
+
+### Procedure
+
+- Use only local scripts in `/root/.codex/skills/course-lab-experiment-principle/scripts/`.
+- Resolve normalized section input as Markdown first and JSON fallback second; do not silently ignore malformed Markdown when it is present.
+- Stage handout-derived theory figures before writing if a decoded handout JSON is provided.
+- Mutate TeX only inside `Introduction`, `Background`, and `Experiment Principle`, and only inside the selected parent section for combined reports.
+- Surface unsupported theory claims, unsafe existing prose, or uncertain figure grouping in unresolved outputs instead of inventing text.
+
+### Outputs
+
+- Mutated canonical TeX containing only owned theory-facing changes.
+- `principle_ownership.json` describing written sections and inserted handout-derived figures.
+- `principle_unresolved.md` with missing support, unsafe overwrite, or mapping issues.
+- Optional `principle_figures.json`, `principle_figures.tex`, and staged image files when theory figures are processed.
+
+### Validation
+
+- The ownership manifest names only the expected theory-facing sections and, for combined reports, the requested parent section.
+- The unresolved file exists and explicitly records any weak handout support, uncertain figure mapping, or skipped overwrite.
+- The canonical report still leaves results, discussion, late evidence figures, and final-QC material untouched.
+- Local package tests for principle-image staging and direct writing still pass.
+
+### Failure / Reroute Signals
+
+- Missing or malformed normalized sections: stop in standalone mode and request a fresh handout-normalization artifact; in full-report mode, return a reroute hint to handout normalization.
+- Missing canonical TeX or absent scaffold targets: stop and request workspace-template/body-scaffold inputs; in full-report mode, reroute to the relevant setup tool.
+- Ambiguous combined-report part: require an explicit `--parent-section` rather than writing across multiple parts.
+- Substantive non-placeholder user prose in an owned section: leave it unchanged and record the conflict in `principle_unresolved.md`.
+
+### Non-Ownership
+
+- This tool does not choose the experiment, decode handouts, create the workspace, transfer data, compute results, write discussion, place experiment-result photos, or run final QC.
+- This tool does not discover missing inputs by scanning unrelated workspaces or parent-skill folders.
+- This tool does not broaden a part-scoped run into a whole combined-report theory pass.
+
+## Optional Workflow Metadata
+
+- Suggested future role label: `writer`.
+- Typical upstream tools: `course-lab-handout-normalization`, `course-lab-workspace-template`, `course-lab-body-scaffold`.
+- Typical downstream tools: `course-lab-final-staging`, `course-lab-figure-evidence`.
+
+## Workflow Notes
 
 - Use local `scripts/stage_principle_images.py` to stage handout-derived theory figures into the workspace.
 - Use local `scripts/write_experiment_principle.py` to write directly into the canonical report.

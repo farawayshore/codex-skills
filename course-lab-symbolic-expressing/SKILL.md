@@ -9,23 +9,49 @@ description: Use when a course lab-report run has explicit handout, calculation-
 
 Use this optional standalone helper to explain how a selected processed result follows from the handout and calculation code. It writes temporary TeX-like formula/procedure artifacts and returns the path to the requesting skill.
 
-## When to Use
+## Standalone Tool Contract
 
-- A caller already knows the handout path, calculation-code path, processed-result path, and target result key.
-- A result needs undergraduate-readable mathematical procedure support.
-- Another skill, such as later final-staging work, will consume a returned temp TeX path.
-- Workspace-local temporary output is preferred, or the caller explicitly provides a `/tmp` output directory.
+### Use Independently When
+- A selected processed result needs a compact undergraduate-readable TeX formula/procedure explanation before another tool consumes it.
+- Handout, calculation-code, and processed-result artifacts are all available for a traceable symbolic handoff.
 
-Do not use this skill to recompute official results, mutate `main.tex`, interpret physics, compare theory, place figures, compile, or run QC.
+### Minimum Inputs
+- Selected result key or result identifier.
+- Handout/normalized section artifact containing the relevant formula or theory context.
+- Calculation code or calculation-detail artifact showing how the value was computed.
+- Processed-result artifact with expressions, values, units, and uncertainty support.
 
-## Output Contract
+### Optional Workflow Inputs
+- Appendix calculation manifest, uncertainty artifacts, or downstream TeX insertion target.
+- Requested notation style or formula depth from the report template or user.
 
-- Use local `scripts/render_symbolic_explanation.py`.
-- Require explicit `--handout`, `--calculation-code`, `--processed-result`, `--result-key`, `--output-dir`, and `--output-response-json`.
-- Return the generated `tex_path` through response JSON.
-- Keep unresolved handout/code/result mismatches visible instead of inventing derivations.
-- Default callers should use workspace-local temp output such as `analysis/symbolic_expressing/tmp/`; callers may override to `/tmp/...` for one-shot use.
-- This skill does not mutate `main.tex` or discover files by scanning the workspace.
+### Procedure
+- Read the handout, calculation code/details, and processed-result artifact for the selected result only.
+- Write a compact temporary TeX-like formula chain and procedure note that traces inputs to output.
+- Return the artifact path to the requesting caller instead of mutating broad report prose.
+
+### Outputs
+- Temporary TeX/procedure artifact for the selected result.
+- A short handoff note naming the result key, source artifacts, and any unresolved formula/notation gaps.
+
+### Validation
+- The formula chain is traceable to the handout and calculation artifacts.
+- Values, units, and uncertainty terms match the processed-result artifact.
+- The output is scoped to the selected result and has a path that downstream tools can consume.
+
+### Failure / Reroute Signals
+- Missing handout, calculation code, or processed result: in standalone mode, stop and request the exact artifact; in full-workflow mode, reroute to the missing upstream data-processing or handout-normalization step.
+- Ambiguous result key: list candidate keys and wait for a selection.
+- Formula support absent: emit an unresolved notation/procedure gap rather than inventing derivations.
+
+### Non-Ownership
+- Does not run calculations, decide scientific scope, edit the canonical report, or draft broad interpretation/discussion prose.
+- Does not generalize one selected result's formula route to unrelated results.
+
+## Optional Workflow Metadata
+- Suggested future role label: `data-analyst`.
+- Typical upstream tools: `course-lab-data-processing`, `course-lab-uncertainty-analysis`, `course-lab-handout-normalization`.
+- Typical downstream tools: `course-lab-final-staging`, `course-lab-experiment-principle`, requester-specific TeX insertion tools.
 
 ## Primary Command
 
@@ -47,6 +73,17 @@ python3 /root/.codex/skills/course-lab-symbolic-expressing/scripts/render_symbol
 4. Write a compact temporary TeX artifact with the formula chain and calculation route.
 5. Write response JSON with `tex_path`, source trace, and `unresolved` notes.
 6. Return the response path or printed TeX path to the caller.
+
+## Quick Reference
+
+### Contract Notes
+
+- Use local `scripts/render_symbolic_explanation.py`.
+- Require explicit `--handout`, `--calculation-code`, `--processed-result`, `--result-key`, `--output-dir`, and `--output-response-json`.
+- Return the generated `tex_path` through response JSON.
+- Keep unresolved handout/code/result mismatches visible instead of inventing derivations.
+- Default callers should use workspace-local temp output such as `analysis/symbolic_expressing/tmp/`; callers may override to `/tmp/...` for one-shot use.
+- This skill does not mutate `main.tex` or discover files by scanning the workspace.
 
 ## Common Mistakes
 

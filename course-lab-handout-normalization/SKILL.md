@@ -11,35 +11,51 @@ Make a selected handout or reference structurally usable for later report work.
 
 This skill is MinerU-only for decoding: MinerU Markdown is the required Markdown-first path for readable inspection, MinerU JSON is the required JSON-second path when structure extraction is needed, and vision is complementary only for resolving layout or figure ambiguities. Do not use `pdftotext`.
 
-## When to Use
+## Standalone Tool Contract
 
-- The experiment and source PDF are already confirmed by `course-lab-discovery`.
-- A handout or reference PDF exists, but it is unclear whether decoded output already exists.
-- MinerU output exists, but later steps need normalized sections instead of raw blocks.
-- The next step needs procedure, principle, equipment, image, table, or thinking-question structure from the handout.
-- The run needs a clean handoff before `course-lab-workspace-template` or `course-lab-body-scaffold`.
+### Use Independently When
+- A selected handout or reference PDF needs Markdown-first decoding, JSON section extraction, or visible structure-gap notes.
+- Persistent decoded handout artifacts are missing, stale, or summary-only and must be recreated before workspace setup or report drafting.
 
-Do not use this skill to pick the experiment, choose a template, edit `main.tex`, or draft report wording.
+### Minimum Inputs
+- A selected handout/reference PDF path, or an existing decoded Markdown/JSON source that is visibly tied to the selected experiment.
+- Experiment name or safe slug for persistent artifact naming.
+- Output destination for normalized section artifacts when a workspace already exists, or an experiment-specific temporary destination when it does not.
 
-## Output Contract
+### Optional Workflow Inputs
+- Discovery manifest entries naming candidate handout/reference paths.
+- Workspace notes directory, canonical report workspace path, or run-plan destination for `sections.json` and `sections.md`.
+- Source role label such as `handout` or `reference` when more than one PDF is normalized in the same run.
 
-- Use the local `scripts/extract_decoded_sections.py` as this skill's canonical normalization tool.
-- Reuse an existing decoded Markdown when it clearly matches the selected handout or reference.
-- MinerU Markdown-first is mandatory. Prefer `$mineru-pdf-markdown` as the first decode path when no suitable decoded artifact exists.
-- Reuse an existing decoded JSON when normalized section extraction is already needed and the match is clear.
-- MinerU JSON-second is mandatory. Use `$mineru-pdf-json` as the second decode path only when downstream work needs structured blocks, section extraction, or block-level image and table metadata.
-- Never use `pdftotext`, plain OCR text dumps, or text-only PDF fallback methods for this skill.
-- Use vision only as a complementary check when MinerU output leaves figures, formulas, page regions, or heading boundaries ambiguous.
-- Successful handout normalization must leave persistent decoded handout artifacts under `AI_works/resources/experiment_handout/Modern Physics Experiments/pdf_decoded/<experiment-name>/`.
-- The canonical persistent success paths are `AI_works/resources/experiment_handout/Modern Physics Experiments/pdf_decoded/<experiment-name>/<experiment-name>.md` and `AI_works/resources/experiment_handout/Modern Physics Experiments/pdf_decoded/<experiment-name>/<experiment-name>.json`.
-- Run `extract_decoded_sections.py` only on the chosen decoded JSON when section artifacts are actually needed.
-- When a workspace already exists, the canonical downstream normalized routing artifacts are `/path/to/results/<experiment>/notes/sections.json` and `/path/to/results/<experiment>/notes/sections.md`.
-- For selected same-experiment references, preserve `expected_decoded_markdown_path` and `expected_decoded_json_path` from discovery; if those fields are missing, reroute to `course-lab-discovery` instead of guessing.
-- If selected same-experiment references exist but the decoded Markdown path is still missing on disk, reroute back here and restore `expected_decoded_markdown_path` before downstream QC continues.
-- When you save paired normalization artifacts, use experiment-specific filenames such as `/tmp/course-lab-handout-normalization-<experiment-safe-name>-handout.json` and `/tmp/course-lab-handout-normalization-<experiment-safe-name>-handout.md`. Use source suffixes like `handout` and `reference` when both sources may exist in the same run.
-- Produce visible unresolved structure notes even when the run stops at the Markdown-first stage.
-- When JSON is required, produce one normalized section JSON and one normalized section Markdown artifact.
-- Summary-only notes are not successful handout normalization. The skill must not treat ad hoc extracts as equivalent to persistent decoded handout artifacts.
+### Procedure
+- Prefer MinerU Markdown-first inspection before JSON extraction when no suitable persistent decoded artifact exists.
+- Persist decoded handout artifacts under `AI_works/resources/experiment_handout/Modern Physics Experiments/pdf_decoded/<experiment-name>/` rather than leaving only `/tmp` or summary-only notes.
+- Run `extract_decoded_sections.py` only after the decoded JSON is available and section artifacts are actually needed.
+- Keep visible notes for missing titles, broken section order, ambiguous figures, or appendix candidates.
+
+### Outputs
+- Persistent decoded Markdown and JSON artifacts for the selected handout/reference source.
+- Normalized section JSON and Markdown artifacts, typically `/path/to/results/<experiment>/notes/sections.json` and `/path/to/results/<experiment>/notes/sections.md` once a workspace exists.
+- Structure-gap notes naming ambiguous or missing sections that later tools must not ignore.
+
+### Validation
+- Markdown-first decode was checked before JSON-dependent section extraction.
+- Successful normalization leaves persistent decoded artifacts, not only ad hoc excerpts or summary notes.
+- Normalized artifacts include title, section order, front matter, sections, appendix candidates, and unresolved structure notes when present.
+
+### Failure / Reroute Signals
+- Missing selected PDF/decoded source: in standalone mode, stop and request the source path; in full-workflow mode, reroute to `course-lab-discovery`.
+- MinerU/API/decode failure: report the failed decode path and any partial artifacts; do not pretend summary notes are normalized handout artifacts.
+- Structure ambiguity: emit normalized artifacts with explicit gap notes when usable, or stop before downstream drafting if the required sections are unrecoverable.
+
+### Non-Ownership
+- Does not create or refresh the report workspace, choose the template, transcribe raw data, or write report prose.
+- Does not treat temporary snippets, OCR summaries, or human memory as replacements for persistent decoded handout artifacts.
+
+## Optional Workflow Metadata
+- Suggested future role label: `preparer`.
+- Typical upstream tools: `course-lab-discovery`, selected PDF/reference source.
+- Typical downstream tools: `course-lab-workspace-template`, `course-lab-run-plan`, `course-lab-body-scaffold`, `course-lab-experiment-principle`.
 
 ## Primary Command
 
@@ -67,6 +83,26 @@ When later steps need saved normalization artifacts, keep the filenames experime
 11. Review `title`, `section_order`, `front_matter`, `sections`, and `appendix_candidates`, then hand off either Markdown-first inspection notes or experiment-specific normalized artifacts plus unresolved structure notes.
 
 ## Quick Reference
+
+### Contract Notes
+
+- Use the local `scripts/extract_decoded_sections.py` as this skill's canonical normalization tool.
+- Reuse an existing decoded Markdown when it clearly matches the selected handout or reference.
+- MinerU Markdown-first is mandatory. Prefer `$mineru-pdf-markdown` as the first decode path when no suitable decoded artifact exists.
+- Reuse an existing decoded JSON when normalized section extraction is already needed and the match is clear.
+- MinerU JSON-second is mandatory. Use `$mineru-pdf-json` as the second decode path only when downstream work needs structured blocks, section extraction, or block-level image and table metadata.
+- Never use `pdftotext`, plain OCR text dumps, or text-only PDF fallback methods for this skill.
+- Use vision only as a complementary check when MinerU output leaves figures, formulas, page regions, or heading boundaries ambiguous.
+- Successful handout normalization must leave persistent decoded handout artifacts under `AI_works/resources/experiment_handout/Modern Physics Experiments/pdf_decoded/<experiment-name>/`.
+- The canonical persistent success paths are `AI_works/resources/experiment_handout/Modern Physics Experiments/pdf_decoded/<experiment-name>/<experiment-name>.md` and `AI_works/resources/experiment_handout/Modern Physics Experiments/pdf_decoded/<experiment-name>/<experiment-name>.json`.
+- Run `extract_decoded_sections.py` only on the chosen decoded JSON when section artifacts are actually needed.
+- When a workspace already exists, the canonical downstream normalized routing artifacts are `/path/to/results/<experiment>/notes/sections.json` and `/path/to/results/<experiment>/notes/sections.md`.
+- For selected same-experiment references, preserve `expected_decoded_markdown_path` and `expected_decoded_json_path` from discovery; if those fields are missing, reroute to `course-lab-discovery` instead of guessing.
+- If selected same-experiment references exist but the decoded Markdown path is still missing on disk, reroute back here and restore `expected_decoded_markdown_path` before downstream QC continues.
+- When you save paired normalization artifacts, use experiment-specific filenames such as `/tmp/course-lab-handout-normalization-<experiment-safe-name>-handout.json` and `/tmp/course-lab-handout-normalization-<experiment-safe-name>-handout.md`. Use source suffixes like `handout` and `reference` when both sources may exist in the same run.
+- Produce visible unresolved structure notes even when the run stops at the Markdown-first stage.
+- When JSON is required, produce one normalized section JSON and one normalized section Markdown artifact.
+- Summary-only notes are not successful handout normalization. The skill must not treat ad hoc extracts as equivalent to persistent decoded handout artifacts.
 
 | Situation | Action |
 |---|---|

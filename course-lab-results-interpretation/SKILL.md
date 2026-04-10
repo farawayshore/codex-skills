@@ -11,44 +11,51 @@ Turn handout-grounded lab evidence into standalone interpretation artifacts with
 
 This skill is standalone with local copied tools. It should read the normalized handout first, then justify processed-data artifacts through explicit comparison lanes against simulation outputs, handout standard/example values, internet references, and theory-based comparison values when those exist, while keeping unresolved comparison gaps visible instead of hiding them inside stronger prose.
 
-## When to Use
+## Standalone Tool Contract
 
-- The experiment is already confirmed.
-- normalized handout artifacts already exist from `course-lab-handout-normalization`.
-- `course-lab-data-processing` has already produced processed-data artifacts.
-- Optional plot manifests or modeling outputs may already exist and should be folded into result reasoning when relevant.
-- The run needs stronger justification for processed quantities such as Young's modulus, characteristic frequencies, wave speeds, or fitted constants.
-- The run needs anomaly visibility, result inventory structure, or completeness checks before `course-lab-discussion-ideas` or `course-lab-final-staging`.
-- The workflow needs artifact-only outputs rather than direct writing into `main.tex`.
+### Use Independently When
+- Normalized handout artifacts and processed-data artifacts exist and the task is to produce artifact-only result interpretation, not report mutation.
+- The run needs handout-first justification, comparison lanes, anomaly visibility, completeness checks, or proposal artifacts before discussion or final staging.
 
-Do not use this skill to transcribe raw data, compute new derived quantities, run modeling jobs, generate discussion ideas, write directly into the report, or perform final QC.
+### Minimum Inputs
+- Normalized handout JSON/Markdown artifacts.
+- Processed-data JSON/Markdown artifacts or result inventory produced from validated data.
+- Output destination for interpretation JSON/Markdown artifacts.
 
-## Output Contract
+### Optional Workflow Inputs
+- Plot manifests, modeling outputs, simulation outputs, reference/literature artifacts, run-plan comparison obligations, and approved proposal metadata.
+- Theoretical comparison values or upstream theory artifacts when explicitly available.
+- Existing `agent_proposed_key_results` state for pending/approved/rejected proposal tracking.
 
-- Use local `/root/.codex/skills/course-lab-results-interpretation/scripts/build_results_interpretation.py` as the main synthesis entrypoint.
-- Use local `/root/.codex/skills/course-lab-results-interpretation/scripts/stage_reference_values.py` to stage `reference_values.json` by merging local handout/theory seeds with live internet search results.
-- Keep runtime dependencies local to `/root/.codex/skills/course-lab-results-interpretation/`.
-- Read the normalized handout first and treat it as required interpretation context.
-- Treat processed-data JSON as a required base input.
-- Prefer normalized handout Markdown first. Fall back to normalized handout JSON only when Markdown is absent.
-- Treat processed-data Markdown, plot manifests, modeling outputs, references, run-plan expectations, and confirmed `comparison_obligations` as optional supporting inputs.
-- Emit artifact-only outputs:
-  - `results_interpretation.json`
-  - `results_interpretation.md`
-  - `results_interpretation_unresolved.md`
-- Include `comparison_records` in `results_interpretation.json` so handout/data/simulation/theory comparisons stay explicit instead of getting buried in prose.
-- When a confirmed run-plan JSON exists, read `comparison_obligations` from it and treat those obligations as the primary comparison contract.
-- Emit `agent_proposed_key_results` when interpretation discovers extra comparison-worthy results that still need user confirmation.
-- Mark proposals explicitly with states such as `pending_user`, and keep only later `approved` proposals eligible for promotion into downstream reference artifacts.
-- Emit `candidate_literature_sources` only for proposal paths; do not silently promote those sources into the confirmed comparison set.
-- Prefer one reference artifact that can hold multiple entries per processed result, distinguished by `comparison_basis` such as `handout_standard`, `internet_reference`, and `theoretical_computation`.
-- Preserve approved literature promotion with explicit `comparison_basis: literature_report` and `lane: literature_report_vs_data`.
-- When internet references are used, preserve the concrete source link and enough citation metadata for later attribution.
-- Use `comparison_requirements` in `references-json` when a run should explicitly require some justification lanes, for example `internet_reference` and `theoretical_computation`.
-- If theory or reference support is missing, still emit partial interpretation artifacts when the remaining lanes stay honest.
-- If a required justification lane is missing for a processed result, keep that gap explicit in unresolved output instead of silently downgrading the check.
-- If the handout expects simulation comparison and modeling artifacts are missing, keep that gap visible in unresolved output instead of downgrading it silently.
-- Keep unresolved comparison gaps, conflicting evidence, and missing expected result families visible instead of inventing stronger conclusions.
+### Procedure
+- Read the handout before interpreting processed results and build explicit comparison lanes only from available support.
+- Emit support/credibility labels such as handout-backed, data-backed, plot-backed, simulation-backed, reference-backed, theory-backed, generic/speculative, or unresolved.
+- Keep `agent_proposed_key_results` and `candidate_literature_sources` artifact-only and `pending_user` until a user marks them `approved`, `rejected`, or `needs_revision`.
+- Preserve unresolved comparison gaps instead of downgrading or hiding them in stronger prose.
+
+### Outputs
+- Artifact-only interpretation JSON and Markdown.
+- `comparison_records` across supported handout expectations, simulation outputs, handout standards, internet/reference values, theory values, and approved literature values.
+- `agent_proposed_key_results`, `candidate_literature_sources`, completeness warnings, and unresolved justification gaps where applicable.
+
+### Validation
+- Every confirmed comparison record has an explicit support source and credibility/support label.
+- Pending proposals are not promoted into confirmed comparison sets or canonical references.
+- Missing modeling/reference/theory support remains visible in unresolved output while still allowing honest partial interpretation artifacts.
+
+### Failure / Reroute Signals
+- Missing processed data or normalized handout: in standalone mode, stop and request the artifact; in full-workflow mode, reroute to the missing upstream tool.
+- Missing optional reference/model lane: emit partial interpretation plus unresolved gap rather than blocking all output unless that lane is required by the handout.
+- Extra comparison-worthy result discovered: emit it as `pending_user` proposal, not final scope.
+
+### Non-Ownership
+- Does not mutate `main.tex`, draft broad final discussion prose, stage figures, or run final QC.
+- Does not silently confirm internet/theory/simulation comparisons without source support.
+
+## Optional Workflow Metadata
+- Suggested future role label: `data-analyst`.
+- Typical upstream tools: `course-lab-data-processing`, `course-lab-uncertainty-analysis`, `course-lab-plotting`, modeling/reference tools.
+- Typical downstream tools: `course-lab-discussion-ideas`, `course-lab-discussion-synthesis`, `course-lab-final-staging`.
 
 ## Primary Command
 
@@ -141,6 +148,33 @@ Recommended `references-json` shape when justification needs multiple lanes:
 15. Keep unresolved notes explicit when simulation or justification lanes are missing, evidence conflicts, or expected result families are still absent.
 
 ## Quick Reference
+
+### Contract Notes
+
+- Use local `/root/.codex/skills/course-lab-results-interpretation/scripts/build_results_interpretation.py` as the main synthesis entrypoint.
+- Use local `/root/.codex/skills/course-lab-results-interpretation/scripts/stage_reference_values.py` to stage `reference_values.json` by merging local handout/theory seeds with live internet search results.
+- Keep runtime dependencies local to `/root/.codex/skills/course-lab-results-interpretation/`.
+- Read the normalized handout first and treat it as required interpretation context.
+- Treat processed-data JSON as a required base input.
+- Prefer normalized handout Markdown first. Fall back to normalized handout JSON only when Markdown is absent.
+- Treat processed-data Markdown, plot manifests, modeling outputs, references, run-plan expectations, and confirmed `comparison_obligations` as optional supporting inputs.
+- Emit artifact-only outputs:
+  - `results_interpretation.json`
+  - `results_interpretation.md`
+  - `results_interpretation_unresolved.md`
+- Include `comparison_records` in `results_interpretation.json` so handout/data/simulation/theory comparisons stay explicit instead of getting buried in prose.
+- When a confirmed run-plan JSON exists, read `comparison_obligations` from it and treat those obligations as the primary comparison contract.
+- Emit `agent_proposed_key_results` when interpretation discovers extra comparison-worthy results that still need user confirmation.
+- Mark proposals explicitly with states such as `pending_user`, and keep only later `approved` proposals eligible for promotion into downstream reference artifacts.
+- Emit `candidate_literature_sources` only for proposal paths; do not silently promote those sources into the confirmed comparison set.
+- Prefer one reference artifact that can hold multiple entries per processed result, distinguished by `comparison_basis` such as `handout_standard`, `internet_reference`, and `theoretical_computation`.
+- Preserve approved literature promotion with explicit `comparison_basis: literature_report` and `lane: literature_report_vs_data`.
+- When internet references are used, preserve the concrete source link and enough citation metadata for later attribution.
+- Use `comparison_requirements` in `references-json` when a run should explicitly require some justification lanes, for example `internet_reference` and `theoretical_computation`.
+- If theory or reference support is missing, still emit partial interpretation artifacts when the remaining lanes stay honest.
+- If a required justification lane is missing for a processed result, keep that gap explicit in unresolved output instead of silently downgrading the check.
+- If the handout expects simulation comparison and modeling artifacts are missing, keep that gap visible in unresolved output instead of downgrading it silently.
+- Keep unresolved comparison gaps, conflicting evidence, and missing expected result families visible instead of inventing stronger conclusions.
 
 | Situation | Action |
 |---|---|
